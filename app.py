@@ -221,6 +221,27 @@ div[data-testid="stButton"] > button[kind="secondary"] {
     box-shadow: 0 3px 10px rgba(15,23,42,.06);
 }
 
+/* Force Streamlit button label size */
+div[data-testid="stButton"] button p,
+div[data-testid="stButton"] button span,
+div[data-testid="stButton"] button {
+    font-size: 24px !important;
+    font-weight: 950 !important;
+    line-height: 1.1 !important;
+}
+
+/* Keep long action buttons slightly smaller */
+button[title="전체 수량 초기화"] p {
+    font-size: 16px !important;
+}
+
+/* Number input internal +/- buttons */
+div[data-testid="stNumberInput"] button,
+div[data-testid="stNumberInput"] button svg {
+    font-size: 22px !important;
+    font-weight: 950 !important;
+}
+
 /* Textareas */
 div[data-testid="stTextArea"] textarea {
     font-size: 16px;
@@ -629,8 +650,18 @@ with st.sidebar:
 
     st.divider()
     st.markdown("## 입금 안내")
-    account_number = st.text_input("계좌번호", placeholder="예: 농협 000-0000-0000-00")
-    account_holder = st.text_input("예금주", placeholder="예: 식혜명가")
+    account_number = st.text_input(
+        "계좌번호",
+        value="3333-29-8917220",
+        placeholder="예: 농협 000-0000-0000-00",
+        help="기본값이 들어가 있지만 필요하면 수정할 수 있습니다.",
+    )
+    account_holder = st.text_input(
+        "예금주",
+        value="이서백(식혜명가)",
+        placeholder="예: 식혜명가",
+        help="기본값이 들어가 있지만 필요하면 수정할 수 있습니다.",
+    )
 
 
 button_rows = parse_button_orders(prices)
