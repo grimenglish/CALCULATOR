@@ -63,23 +63,38 @@ st.markdown(
     padding-bottom: 3rem;
 }
 .hero {
-    background: linear-gradient(135deg, #111827 0%, #1f2937 62%, #334155 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 58%, #334155 100%);
     color: white;
-    padding: 28px 34px;
-    border-radius: 24px;
-    box-shadow: 0 20px 45px rgba(15, 23, 42, .22);
+    padding: 30px 34px;
+    border-radius: 28px;
+    box-shadow: 0 24px 55px rgba(15, 23, 42, .22);
     margin-bottom: 22px;
+    overflow: hidden;
 }
-.hero h1 {
-    margin: 0 0 10px 0;
+.hero-grid {
+    display: grid;
+    grid-template-columns: 1.2fr .95fr;
+    gap: 24px;
+    align-items: center;
+}
+.hero-text h1 {
+    margin: 0 0 12px 0;
     font-size: 34px;
-    line-height: 1.2;
-    letter-spacing: -0.04em;
+    line-height: 1.16;
+    letter-spacing: -0.05em;
 }
-.hero p {
+.hero-text p {
     color: #dbeafe;
     margin: 0;
     font-size: 16px;
+    line-height: 1.6;
+}
+.hero-illu {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 24px;
+    padding: 14px;
+    backdrop-filter: blur(4px);
 }
 .badge-wrap {
     display: flex;
@@ -94,6 +109,11 @@ st.markdown(
     border-radius: 999px;
     font-size: 13px;
     font-weight: 800;
+}
+@media (max-width: 980px) {
+    .hero-grid {
+        grid-template-columns: 1fr;
+    }
 }
 .section-title {
     font-size: 25px;
@@ -178,8 +198,19 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     border-radius: 22px;
     box-shadow: 0 12px 26px rgba(15,23,42,.05);
 }
-button[kind="secondary"] {
-    border-radius: 13px !important;
+div[data-testid="stButton"] > button {
+    border-radius: 14px !important;
+    border: 1px solid rgba(148,163,184,.42) !important;
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    min-height: 48px !important;
+    line-height: 1 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+}
+div[data-testid="stButton"] > button:hover {
+    border-color: rgba(37,99,235,.52) !important;
+    color: #1d4ed8 !important;
 }
 </style>
 """,
@@ -435,11 +466,29 @@ def build_templates(summary, subtotal, discount_rate, discount_amount, shipping_
         "입금 후 성함 남겨주시면 확인하겠습니다.",
     ])
 
-    return {
+    templates = {
         "1. 친절 기본형": basic,
         "2. 깔끔 영수증형": receipt,
         "3. 입금 안내형": deposit,
     }
+
+    if not shipping_enabled:
+        free_shipping = "\n".join([
+            "안녕하세요. 주문 금액 안내드립니다.",
+            "",
+            *item_lines,
+            "",
+            f"상품 합계 = {subtotal:,}원",
+            f"할인 {discount_rate:.1f}% = -{discount_amount:,}원",
+            "택배비 = 0원",
+            f"최종 결제금액 = {final_amount:,}원",
+            "",
+            "택배비는 업체에서 부담합니다.",
+            "확인 부탁드립니다. 감사합니다.",
+        ])
+        templates["4. 무료배송 안내형"] = free_shipping
+
+    return templates
 
 
 with st.sidebar:
@@ -452,7 +501,7 @@ with st.sidebar:
     st.markdown("## 할인 / 배송")
     discount_rate = float(st.number_input("상품 전체 할인율 (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0))
     shipping_fee_setting = int(st.number_input("택배비", min_value=0, value=4000, step=500))
-    shipping_enabled = st.toggle("택배비 적용", value=True, help="끄면 택배비가 최종금액에 합산되지 않습니다.")
+    shipping_enabled = st.toggle("택배비 적용", value=True, help="끄면 택배비는 0원으로 처리되고 무료배송 안내형 문구도 함께 사용할 수 있습니다.")
 
     st.divider()
     st.markdown("## 자동 인식")
@@ -489,15 +538,62 @@ final_amount = after_discount + shipping_fee
 
 
 st.markdown(
-    """
+    f"""
 <div class="hero">
-    <h1>식혜 주문 자동계산기 PRO</h1>
-    <p>왼쪽에서 상품 수량을 빠르게 누르고, 오른쪽에서 최종금액을 바로 확인합니다.</p>
-    <div class="badge-wrap">
-        <span class="badge">세로형 수량 계산</span>
-        <span class="badge">카톡 문구 자동 인식</span>
-        <span class="badge">택배비 ON/OFF</span>
-        <span class="badge">계좌 문구 자동 삽입</span>
+    <div class="hero-grid">
+        <div class="hero-text">
+            <h1>식혜 주문 자동계산기 PRO</h1>
+            <p>왼쪽에서 상품 수량을 빠르게 누르고, 오른쪽에서 최종금액을 한눈에 확인하세요.<br>카톡 문구 자동 인식, 무료배송 안내형 문구, 계좌안내까지 한 번에 처리합니다.</p>
+            <div class="badge-wrap">
+                <span class="badge">세로형 수량 계산</span>
+                <span class="badge">카톡 문구 자동 인식</span>
+                <span class="badge">택배비 ON/OFF</span>
+                <span class="badge">무료배송 문구 지원</span>
+                <span class="badge">계좌 문구 자동 삽입</span>
+            </div>
+        </div>
+        <div class="hero-illu">
+            <svg viewBox="0 0 420 220" width="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="cardA" x1="0" x2="1">
+                        <stop offset="0%" stop-color="#eff6ff"/>
+                        <stop offset="100%" stop-color="#dbeafe"/>
+                    </linearGradient>
+                    <linearGradient id="cardB" x1="0" x2="1">
+                        <stop offset="0%" stop-color="#f8fafc"/>
+                        <stop offset="100%" stop-color="#e2e8f0"/>
+                    </linearGradient>
+                    <linearGradient id="gold" x1="0" x2="1">
+                        <stop offset="0%" stop-color="#fde68a"/>
+                        <stop offset="100%" stop-color="#fbbf24"/>
+                    </linearGradient>
+                </defs>
+                <rect x="16" y="28" rx="20" ry="20" width="170" height="164" fill="url(#cardA)"/>
+                <rect x="34" y="46" rx="12" ry="12" width="136" height="42" fill="#0f172a"/>
+                <text x="48" y="72" fill="#ffffff" font-size="22" font-weight="900">₩ {final_amount:,}</text>
+                <rect x="34" y="105" rx="10" ry="10" width="40" height="34" fill="#ffffff"/>
+                <rect x="80" y="105" rx="10" ry="10" width="40" height="34" fill="#ffffff"/>
+                <rect x="126" y="105" rx="10" ry="10" width="40" height="34" fill="#ffffff"/>
+                <text x="47" y="126" fill="#1d4ed8" font-size="16" font-weight="900">+</text>
+                <text x="93" y="126" fill="#1d4ed8" font-size="16" font-weight="900">+5</text>
+                <text x="140" y="126" fill="#1d4ed8" font-size="16" font-weight="900">0</text>
+                <rect x="34" y="152" rx="10" ry="10" width="136" height="24" fill="#ffffff"/>
+                <rect x="44" y="159" rx="6" ry="6" width="68" height="10" fill="#cbd5e1"/>
+                <rect x="116" y="159" rx="6" ry="6" width="42" height="10" fill="#93c5fd"/>
+
+                <rect x="204" y="38" rx="20" ry="20" width="200" height="144" fill="url(#cardB)"/>
+                <rect x="222" y="54" rx="10" ry="10" width="164" height="28" fill="#ffffff"/>
+                <text x="236" y="72" fill="#334155" font-size="14" font-weight="800">주문 자동 인식 결과</text>
+                <circle cx="246" cy="106" r="14" fill="#ffffff" stroke="#cbd5e1"/>
+                <rect x="268" y="95" rx="8" ry="8" width="108" height="22" fill="#ffffff"/>
+                <text x="278" y="110" fill="#0f172a" font-size="12" font-weight="800">일반식혜 1L × 3</text>
+                <circle cx="246" cy="138" r="14" fill="#ffffff" stroke="#cbd5e1"/>
+                <rect x="268" y="127" rx="8" ry="8" width="108" height="22" fill="#ffffff"/>
+                <text x="278" y="142" fill="#0f172a" font-size="12" font-weight="800">단호박식혜 500ml × 2</text>
+                <rect x="268" y="156" rx="9" ry="9" width="82" height="22" fill="url(#gold)"/>
+                <text x="284" y="171" fill="#0f172a" font-size="12" font-weight="900">합계 확인</text>
+            </svg>
+        </div>
     </div>
 </div>
 """,
