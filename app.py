@@ -1,21 +1,18 @@
 import re
-import hashlib
 from datetime import datetime
 
 import pandas as pd
 import streamlit as st
 
+
 st.set_page_config(
     page_title="식혜 주문 자동계산기 PRO",
     page_icon="🥤",
     layout="wide",
-    initial_sidebar_state="expanded",
 )
 
-# =============================
-# 기본 상품/가격
-# =============================
-DEFAULT_PRODUCTS = {
+
+PRODUCTS = {
     "일반식혜 1L": 5000,
     "일반식혜 500ml": 3000,
     "일반식혜 200ml 파우치": 1800,
@@ -23,11 +20,7 @@ DEFAULT_PRODUCTS = {
     "단호박식혜 500ml": 4000,
 }
 
-PRODUCT_ORDER = list(DEFAULT_PRODUCTS.keys())
-
-SAMPLE_TEXT = """식혜 1L 3개
-호박감주 500ml 2개
-식혜 200ml 파우치 10개"""
+PRODUCT_ORDER = list(PRODUCTS.keys())
 
 KOR_NUM = {
     "한": 1, "하나": 1, "일": 1,
@@ -42,626 +35,685 @@ KOR_NUM = {
     "열": 10, "십": 10,
 }
 
-# =============================
-# 디자인 CSS
-# =============================
+EXAMPLE_TEXT = """식혜 1L 3개
+호박감주 500ml 2개
+200x4
+새벽에 식혜 1L 4개랑 단호박식혜 500ML 1개줘"""
+
+
+# -----------------------------
+# CSS
+# -----------------------------
 st.markdown(
     """
-    <style>
-    :root {
-        --bg: #f4f7fb;
-        --card: #ffffff;
-        --dark: #0f172a;
-        --muted: #64748b;
-        --line: #e2e8f0;
-        --accent: #f59e0b;
-        --accent2: #2563eb;
-    }
-    .stApp {
-        background:
-            radial-gradient(circle at top left, rgba(37, 99, 235, .10), transparent 28%),
-            linear-gradient(180deg, #f8fafc 0%, #eef3fb 100%);
-    }
-    section[data-testid="stSidebar"] {
-        background: #f8fafc;
-        border-right: 1px solid #e2e8f0;
-    }
-    .main .block-container {
-        padding-top: 1.1rem;
-        max-width: 1240px;
-    }
-    .hero {
-        background: linear-gradient(135deg, #172033 0%, #24344d 100%);
-        color: white;
-        padding: 28px 34px;
-        border-radius: 28px;
-        box-shadow: 0 20px 50px rgba(15, 23, 42, .22);
-        margin-bottom: 22px;
-    }
-    .hero h1 {
-        margin: 0;
-        font-size: 34px;
-        font-weight: 900;
-        letter-spacing: -1px;
-    }
-    .hero p {
-        margin: 10px 0 0 0;
-        color: #dbeafe;
-        font-size: 15px;
-        line-height: 1.7;
-    }
-    .badge-wrap {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 16px;
-    }
-    .badge {
-        background: rgba(255,255,255,.92);
-        color: #1e3a8a;
-        border: 1px solid rgba(255,255,255,.65);
-        padding: 8px 13px;
-        border-radius: 999px;
-        font-size: 13px;
-        font-weight: 800;
-    }
-    .section-title {
-        font-size: 22px;
-        font-weight: 900;
-        color: #0f172a;
-        margin: 12px 0 6px 0;
-    }
-    .section-sub {
-        font-size: 14px;
-        color: #64748b;
-        margin-bottom: 14px;
-    }
-    .calc-panel {
-        background: rgba(255, 255, 255, .76);
-        border: 1px solid rgba(226, 232, 240, .95);
-        border-radius: 26px;
-        padding: 22px;
-        box-shadow: 0 16px 40px rgba(15, 23, 42, .08);
-    }
-    .dark-card {
-        background: linear-gradient(145deg, #111827, #0b1020);
-        color: white;
-        border: 1px solid rgba(255,255,255,.08);
-        border-radius: 28px;
-        padding: 26px;
-        box-shadow: 0 20px 50px rgba(15, 23, 42, .22);
-    }
-    .total-label {
-        color: #93c5fd;
-        font-size: 14px;
-        margin-bottom: 8px;
-    }
-    .total-money {
-        color: #fbbf24;
-        font-size: 42px;
-        font-weight: 950;
-        letter-spacing: -1px;
-        margin-bottom: 22px;
-    }
-    .mini-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-    }
-    .mini-box {
-        background: rgba(255,255,255,.08);
-        border: 1px solid rgba(255,255,255,.08);
-        border-radius: 16px;
-        padding: 14px;
-    }
-    .mini-box .k {
-        color: #cbd5e1;
-        font-size: 12px;
-        margin-bottom: 6px;
-    }
-    .mini-box .v {
-        color: white;
-        font-size: 19px;
-        font-weight: 900;
-    }
-    .product-card {
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 22px;
-        padding: 16px;
-        box-shadow: 0 10px 26px rgba(15, 23, 42, .06);
-        margin-bottom: 12px;
-    }
-    .product-name {
-        font-size: 16px;
-        font-weight: 900;
-        color: #111827;
-        margin-bottom: 4px;
-    }
-    .product-price {
-        color: #64748b;
-        font-size: 13px;
-        margin-bottom: 8px;
-    }
-    div[data-testid="stMetric"] {
-        background: rgba(255,255,255,.86);
-        border: 1px solid #e2e8f0;
-        padding: 18px 20px;
-        border-radius: 22px;
-        box-shadow: 0 10px 25px rgba(15, 23, 42, .06);
-    }
-    .stButton > button {
-        border-radius: 13px;
-        font-weight: 900;
-        border: 1px solid #dbe3ee;
-        background: white;
-    }
-    .stButton > button:hover {
-        border-color: #2563eb;
-        color: #1d4ed8;
-    }
-    textarea::placeholder {
-        color: rgba(15, 23, 42, .32) !important;
-    }
-    .copy-box {
-        background: #ffffff;
-        border: 1px dashed #cbd5e1;
-        border-radius: 18px;
-        padding: 14px 16px;
-        color: #475569;
-        font-size: 14px;
-        margin-bottom: 10px;
-    }
-    </style>
-    """,
+<style>
+:root {
+    --navy: #111827;
+    --navy2: #172033;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --card: rgba(255, 255, 255, 0.86);
+    --line: rgba(148, 163, 184, 0.28);
+    --gold: #fbbf24;
+    --green: #16a34a;
+    --red: #dc2626;
+}
+.stApp {
+    background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, .10), transparent 32%),
+        linear-gradient(135deg, #f8fafc 0%, #eef2f7 45%, #f8fafc 100%);
+}
+.block-container {
+    padding-top: 1.8rem;
+    padding-bottom: 3rem;
+}
+.hero {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 60%, #334155 100%);
+    color: white;
+    padding: 30px 36px;
+    border-radius: 24px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, .22);
+    margin-bottom: 24px;
+}
+.hero h1 {
+    margin: 0 0 10px 0;
+    font-size: 34px;
+    line-height: 1.2;
+    letter-spacing: -0.04em;
+}
+.hero p {
+    color: #dbeafe;
+    margin: 0;
+    font-size: 16px;
+}
+.badge-wrap {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+.badge {
+    background: rgba(255,255,255,.92);
+    color: #1e3a8a;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 800;
+}
+.section-title {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--ink);
+    margin: 10px 0 6px;
+    letter-spacing: -0.04em;
+}
+.help-text {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 14px;
+}
+.card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 12px 26px rgba(15, 23, 42, .06);
+}
+.dark-card {
+    background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+    color: white;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 22px 50px rgba(15,23,42,.28);
+}
+.big-money {
+    font-size: 38px;
+    font-weight: 950;
+    color: #fbbf24;
+    letter-spacing: -0.05em;
+}
+.dark-label {
+    color: #93c5fd;
+    font-weight: 800;
+    font-size: 14px;
+}
+.product-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--ink);
+    margin-bottom: 2px;
+}
+.price-small {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+hr.soft {
+    border: none;
+    border-top: 1px solid rgba(148,163,184,.35);
+    margin: 28px 0;
+}
+.copy-box {
+    background: #f8fafc;
+    border: 1px dashed rgba(100,116,139,.50);
+    padding: 14px 16px;
+    border-radius: 14px;
+    white-space: pre-wrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #334155;
+}
+</style>
+""",
     unsafe_allow_html=True,
 )
 
-# =============================
-# 유틸 함수
-# =============================
-def won(value: int) -> str:
-    return f"{int(value):,}원"
+
+# -----------------------------
+# Session state
+# -----------------------------
+for product in PRODUCT_ORDER:
+    st.session_state.setdefault(f"qty_{product}", 0)
+
+st.session_state.setdefault("order_text", "")
 
 
-def normalize_text(text: str) -> str:
-    text = text.replace("１", "1").replace("Ｌ", "L").replace("ｌ", "l")
-    text = text.replace("리터", "L").replace("리뜨", "L")
-    text = text.replace("미리", "ml").replace("밀리", "ml")
+def safe_int(value, default=0):
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def change_qty(product: str, delta: int):
+    key = f"qty_{product}"
+    current = safe_int(st.session_state.get(key, 0), 0)
+    st.session_state[key] = max(0, current + delta)
+
+
+def set_qty_zero(product: str):
+    st.session_state[f"qty_{product}"] = 0
+
+
+def reset_all_qty():
+    for p in PRODUCT_ORDER:
+        st.session_state[f"qty_{p}"] = 0
+
+
+def put_example():
+    st.session_state["order_text"] = EXAMPLE_TEXT
+
+
+# -----------------------------
+# Parser
+# -----------------------------
+BASE_ALIASES = [
+    "단호박식혜", "단호박 식혜", "단호박감주", "단호박 감주",
+    "호박감주", "호박 감주", "호박식혜", "호박 식혜", "단호박", "호박",
+    "일반식혜", "일반 식혜", "일반감주", "일반 감주",
+    "식혜", "식해", "감주",
+]
+BASE_RE = "|".join(re.escape(x) for x in sorted(BASE_ALIASES, key=len, reverse=True))
+
+SIZE_WORDS = [
+    "1000ml", "1000 ml", "1리터", "1 리터", "1l", "1 l", "1L", "1 L",
+    "500ml", "500 ml", "0.5l", "0.5 l", "500",
+    "200ml", "200 ml", "0.2l", "0.2 l", "200",
+    "큰거", "큰 것", "큰것", "큰병", "대병", "대", "큰",
+    "파우치", "팩", "pouch",
+]
+SIZE_RE = "|".join(re.escape(x) for x in sorted(SIZE_WORDS, key=len, reverse=True))
+
+QTY_WORDS = list(KOR_NUM.keys()) + [str(i) for i in range(1, 1000)]
+QTY_RE = "|".join(re.escape(x) for x in sorted(QTY_WORDS, key=len, reverse=True))
+UNIT_RE = r"(?:개|병|통|팩|봉|개입|파우치|잔|박스|box)?"
+
+PATTERNS = [
+    # 식혜 1L 3개 / 단호박식혜500ml1개 / 200x4 / 500 4개
+    re.compile(
+        rf"(?P<base>{BASE_RE})?\s*(?P<size>{SIZE_RE})\s*(?:짜리)?\s*(?:x|X|×|\*|곱하기|에)?\s*(?P<qty>{QTY_RE})\s*{UNIT_RE}",
+        re.IGNORECASE,
+    ),
+    # 1L 식혜 3개 / 500 호박 2개
+    re.compile(
+        rf"(?P<size>{SIZE_RE})\s*(?P<base>{BASE_RE})\s*(?P<qty>{QTY_RE})\s*{UNIT_RE}",
+        re.IGNORECASE,
+    ),
+    # 식혜 3개 / 호박감주 두개 / 감주 4병
+    re.compile(
+        rf"(?P<base>{BASE_RE})\s*(?P<qty>{QTY_RE})\s*(?:개|병|통|팩|봉|개입|파우치|잔|박스|box)",
+        re.IGNORECASE,
+    ),
+    # 3개 식혜 1L / 2병 호박감주 500
+    re.compile(
+        rf"(?P<qty>{QTY_RE})\s*(?:개|병|통|팩|봉|개입|파우치|잔|박스|box)\s*(?P<base>{BASE_RE})\s*(?P<size>{SIZE_RE})?",
+        re.IGNORECASE,
+    ),
+    # 식혜 1L 처럼 수량이 없으면 1개 처리
+    re.compile(
+        rf"(?P<base>{BASE_RE})\s*(?P<size>{SIZE_RE})",
+        re.IGNORECASE,
+    ),
+]
+
+
+def normalize_for_parse(text: str) -> str:
+    text = str(text)
+    replacements = {
+        "１": "1", "２": "2", "３": "3", "４": "4", "５": "5",
+        "６": "6", "７": "7", "８": "8", "９": "9", "０": "0",
+        "Ｌ": "L", "ｌ": "l", "×": "x",
+        "리터": "리터", "미리": "ml", "밀리": "ml",
+    }
+    for a, b in replacements.items():
+        text = text.replace(a, b)
+    text = text.replace("㎖", "ml").replace("ℓ", "L")
+    text = re.sub(r"(\d)\s*(l|L|ml|ML)", lambda m: m.group(1) + m.group(2).lower(), text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
-def detect_product(line: str, default_size: str):
-    line_low = line.lower()
+def qty_to_int(value) -> int:
+    value = str(value).strip()
+    if value.isdigit():
+        return int(value)
+    return KOR_NUM.get(value, 1)
 
-    if any(x in line for x in ["호박", "단호박", "호박감주", "호박 감주", "호박식혜"]):
-        base = "단호박식혜"
-    elif any(x in line for x in ["식혜", "감주"]):
-        base = "일반식혜"
-    else:
-        return None
 
-    is_pouch = "파우치" in line or "pouch" in line_low
+def detect_base(base_text):
+    if not base_text:
+        return "일반식혜"
 
-    if re.search(r"(200\s*ml|200ml|0\.2\s*l|0.2l)", line_low) or is_pouch:
-        size = "200ml 파우치" if base == "일반식혜" else "500ml"
-    elif re.search(r"(500\s*ml|500ml|0\.5\s*l|0.5l|반\s*리터)", line_low):
-        size = "500ml"
-    elif re.search(r"(1\s*l|1l|1000\s*ml|1000ml|1\s*리터|큰거|큰\s*거)", line_low):
-        size = "1L"
-    else:
+    b = base_text.replace(" ", "").lower()
+
+    if "호박" in b or "단호박" in b:
+        return "단호박식혜"
+
+    if "일반" in b or "식혜" in b or "식해" in b or "감주" in b:
+        return "일반식혜"
+
+    return "일반식혜"
+
+
+def detect_size(size_text, base, default_size):
+    if not size_text:
         size = default_size
+    else:
+        s = str(size_text).replace(" ", "").lower()
+        if any(x in s for x in ["200", "0.2", "파우치", "팩", "pouch"]):
+            size = "200ml 파우치"
+        elif any(x in s for x in ["500", "0.5"]):
+            size = "500ml"
+        elif any(x in s for x in ["1l", "1리터", "1000", "큰", "대"]):
+            size = "1L"
+        else:
+            size = default_size
 
+    # 현재 등록 상품에는 단호박 200ml 파우치가 없으므로 200ml 파우치 단독 표기는 일반식혜로 처리
     if base == "단호박식혜" and size == "200ml 파우치":
-        size = "500ml"
+        return "500ml"
+
+    return size
+
+
+def product_from_parts(base_text, size_text, default_size):
+    base = detect_base(base_text)
+    size = detect_size(size_text, base, default_size)
+
+    if size == "200ml 파우치":
+        return "일반식혜 200ml 파우치"
 
     return f"{base} {size}"
 
 
-def detect_quantity(line: str) -> int:
-    unit_matches = re.findall(r"(\d+)\s*(개|병|통|팩|봉|개입|파우치)", line)
-    if unit_matches:
-        return int(unit_matches[-1][0])
-
-    for word, num in KOR_NUM.items():
-        if re.search(fr"{word}\s*(개|병|통|팩|봉|파우치)", line):
-            return num
-
-    numbers = re.findall(r"\d+", line)
-    if len(numbers) >= 2:
-        return int(numbers[-1])
-    if len(numbers) == 1 and not re.search(r"(\d+)\s*(l|L|ml|ML)", line):
-        return int(numbers[0])
-
-    return 1
+def overlaps(span, used_spans):
+    s, e = span
+    for us, ue in used_spans:
+        if s < ue and e > us:
+            return True
+    return False
 
 
-def parse_order(text: str, prices: dict, default_size: str):
+def parse_text_orders(text: str, prices: dict, default_size: str):
+    text = normalize_for_parse(text)
     rows = []
-    warnings = []
-    lines = [normalize_text(x) for x in text.splitlines() if normalize_text(x)]
 
-    for line in lines:
-        product = detect_product(line, default_size)
-        if not product:
-            warnings.append(f"인식 제외: {line}")
-            continue
+    if not text:
+        return rows
 
-        qty = detect_quantity(line)
-        unit_price = int(prices.get(product, 0))
-        rows.append({
-            "입력방식": "붙여넣기",
-            "원문": line,
-            "품목": product,
-            "수량": qty,
-            "단가": unit_price,
-            "금액": qty * unit_price,
-        })
+    used_spans = []
 
-    return rows, warnings
+    for pat in PATTERNS:
+        for m in pat.finditer(text):
+            if overlaps(m.span(), used_spans):
+                continue
 
+            gd = m.groupdict()
+            base_text = gd.get("base")
+            size_text = gd.get("size")
+            qty_text = gd.get("qty") or "1"
 
-def ensure_qty_state():
-    if "manual_qty" not in st.session_state:
-        st.session_state["manual_qty"] = {product: 0 for product in PRODUCT_ORDER}
-    else:
-        for product in PRODUCT_ORDER:
-            st.session_state["manual_qty"].setdefault(product, 0)
+            # 상품명도 없고 용량도 없는 건 주문으로 보지 않음
+            if not base_text and not size_text:
+                continue
 
-    if "qty_version" not in st.session_state:
-        st.session_state["qty_version"] = 0
+            product = product_from_parts(base_text, size_text, default_size)
+            if product not in prices:
+                continue
 
+            qty = max(1, qty_to_int(qty_text))
+            amount = qty * int(prices[product])
 
-def get_qty(product: str) -> int:
-    ensure_qty_state()
-    return int(st.session_state["manual_qty"].get(product, 0) or 0)
+            rows.append(
+                {
+                    "입력방식": "문구 인식",
+                    "원문": m.group(0).strip(),
+                    "품목": product,
+                    "수량": qty,
+                    "단가": int(prices[product]),
+                    "금액": amount,
+                }
+            )
+            used_spans.append(m.span())
 
-
-def set_qty(product: str, qty: int):
-    ensure_qty_state()
-    st.session_state["manual_qty"][product] = max(0, int(qty or 0))
-
-
-def refresh_qty_inputs():
-    ensure_qty_state()
-    st.session_state["qty_version"] += 1
-
-
-def change_qty(product: str, delta: int):
-    set_qty(product, get_qty(product) + delta)
-    refresh_qty_inputs()
-    st.rerun()
-
-
-def zero_qty(product: str):
-    set_qty(product, 0)
-    refresh_qty_inputs()
-    st.rerun()
-
-
-def get_manual_rows(prices: dict):
-    rows = []
-    ensure_qty_state()
-    for product in PRODUCT_ORDER:
-        qty = get_qty(product)
-        if qty > 0:
-            unit_price = int(prices.get(product, 0))
-            rows.append({
-                "입력방식": "버튼계산기",
-                "원문": "수량 버튼 입력",
-                "품목": product,
-                "수량": qty,
-                "단가": unit_price,
-                "금액": qty * unit_price,
-            })
     return rows
 
 
-def make_summary(rows):
-    if not rows:
-        return pd.DataFrame(columns=["품목", "단가", "수량", "금액"])
-    df = pd.DataFrame(rows)
-    return (
-        df.groupby(["품목", "단가"], as_index=False)
-        .agg({"수량": "sum", "금액": "sum"})
-        .sort_values("품목")
+def parse_button_orders(prices: dict):
+    rows = []
+    for product in PRODUCT_ORDER:
+        qty = safe_int(st.session_state.get(f"qty_{product}", 0), 0)
+        if qty > 0:
+            rows.append(
+                {
+                    "입력방식": "버튼 입력",
+                    "원문": "-",
+                    "품목": product,
+                    "수량": qty,
+                    "단가": int(prices[product]),
+                    "금액": qty * int(prices[product]),
+                }
+            )
+    return rows
+
+
+def build_templates(summary, subtotal, discount_rate, discount_amount, after_discount, shipping_fee, shipping_enabled, final_amount, account, depositor):
+    lines = []
+    for _, r in summary.iterrows():
+        lines.append(f"- {r['품목']} {int(r['수량'])}개 = {int(r['금액']):,}원")
+
+    shipping_line = f"택배비 = {shipping_fee:,}원" if shipping_enabled else "택배비 = 0원"
+
+    basic = "\n".join(
+        [
+            "안녕하세요. 주문 금액 안내드립니다.",
+            "",
+            *lines,
+            "",
+            f"상품 합계 = {subtotal:,}원",
+            f"할인 {discount_rate:.1f}% = -{discount_amount:,}원",
+            shipping_line,
+            f"최종 결제금액 = {final_amount:,}원",
+            "",
+            "확인 부탁드립니다. 감사합니다.",
+        ]
     )
 
+    receipt = "\n".join(
+        [
+            "[식혜명가 주문 계산서]",
+            "--------------------",
+            *lines,
+            "--------------------",
+            f"상품 합계       {subtotal:,}원",
+            f"할인 금액      -{discount_amount:,}원",
+            f"택배비          {shipping_fee if shipping_enabled else 0:,}원",
+            "--------------------",
+            f"최종 결제금액   {final_amount:,}원",
+        ]
+    )
 
-def build_message(kind, summary, subtotal, discount_rate, discount_amount, product_after_discount, shipping_fee, final_amount, bank_account, account_holder):
-    lines = []
-    today = datetime.now().strftime("%Y.%m.%d")
+    account_text = account.strip() if account and account.strip() else "계좌번호 미입력"
+    depositor_text = depositor.strip() if depositor and depositor.strip() else "예금주 미입력"
 
-    if kind == "1. 친절 기본형":
-        lines.append("안녕하세요. 주문 금액 안내드립니다 😊")
-        lines.append("")
-        for _, r in summary.iterrows():
-            lines.append(f"- {r['품목']} {int(r['수량'])}개: {won(r['금액'])}")
-        lines.append("")
-        lines.append(f"상품 합계: {won(subtotal)}")
-        if discount_rate > 0:
-            lines.append(f"할인 {discount_rate:.1f}%: -{won(discount_amount)}")
-        if shipping_fee > 0:
-            lines.append(f"택배비: {won(shipping_fee)}")
-        lines.append(f"총 결제금액: {won(final_amount)}")
-        lines.append("")
-        lines.append("확인 부탁드립니다. 감사합니다.")
+    deposit = "\n".join(
+        [
+            "주문 금액 안내드립니다.",
+            "",
+            *lines,
+            "",
+            f"상품 합계: {subtotal:,}원",
+            f"할인 금액: -{discount_amount:,}원",
+            f"택배비: {shipping_fee if shipping_enabled else 0:,}원",
+            f"입금하실 금액: {final_amount:,}원",
+            "",
+            f"입금계좌: {account_text}",
+            f"예금주: {depositor_text}",
+            "",
+            "입금 후 성함 남겨주시면 확인하겠습니다.",
+        ]
+    )
 
-    elif kind == "2. 깔끔 영수증형":
-        lines.append("[주문 계산서]")
-        lines.append(f"작성일: {today}")
-        lines.append("--------------------")
-        for _, r in summary.iterrows():
-            lines.append(f"{r['품목']} x {int(r['수량'])} = {won(r['금액'])}")
-        lines.append("--------------------")
-        lines.append(f"상품 합계: {won(subtotal)}")
-        lines.append(f"할인 금액: -{won(discount_amount)}")
-        lines.append(f"할인 적용 후: {won(product_after_discount)}")
-        lines.append(f"택배비: {won(shipping_fee)}")
-        lines.append(f"최종 결제금액: {won(final_amount)}")
-
-    else:
-        lines.append("[입금 안내]")
-        lines.append("")
-        for _, r in summary.iterrows():
-            lines.append(f"- {r['품목']} {int(r['수량'])}개: {won(r['금액'])}")
-        lines.append("")
-        lines.append(f"상품 합계: {won(subtotal)}")
-        if discount_rate > 0:
-            lines.append(f"할인 {discount_rate:.1f}%: -{won(discount_amount)}")
-        if shipping_fee > 0:
-            lines.append(f"택배비: {won(shipping_fee)}")
-        lines.append(f"입금 금액: {won(final_amount)}")
-        lines.append("")
-        if bank_account.strip():
-            if account_holder.strip():
-                lines.append(f"입금계좌: {bank_account.strip()} / 예금주 {account_holder.strip()}")
-            else:
-                lines.append(f"입금계좌: {bank_account.strip()}")
-        else:
-            lines.append("입금계좌: 계좌번호를 입력해주세요")
-        lines.append("")
-        lines.append("입금 확인 후 발송 준비하겠습니다. 감사합니다.")
-
-    return "\n".join(lines)
+    return {
+        "1. 친절 기본형": basic,
+        "2. 깔끔 영수증형": receipt,
+        "3. 입금 안내형": deposit,
+    }
 
 
-def reset_quantities():
-    ensure_qty_state()
-    for product in PRODUCT_ORDER:
-        st.session_state["manual_qty"][product] = 0
-    refresh_qty_inputs()
-    st.rerun()
-
-# =============================
-# 사이드바
-# =============================
+# -----------------------------
+# Sidebar
+# -----------------------------
 with st.sidebar:
-    st.header("가격 설정")
+    st.markdown("## 가격 설정")
     prices = {}
-    for product, price in DEFAULT_PRODUCTS.items():
-        prices[product] = st.number_input(product, min_value=0, value=price, step=100, key=f"price_{product}")
+    for product, default_price in PRODUCTS.items():
+        prices[product] = int(st.number_input(product, min_value=0, value=default_price, step=100, key=f"price_{product}"))
 
     st.divider()
-    st.header("할인 / 배송")
-    discount_rate = st.number_input("상품 전체 할인율 (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0)
-    shipping_fee = st.number_input("택배비", min_value=0, value=4000, step=500)
+    st.markdown("## 할인 / 배송")
+    discount_rate = float(
+        st.number_input(
+            "상품 전체 할인율 (%)",
+            min_value=0.0,
+            max_value=100.0,
+            value=0.0,
+            step=1.0,
+            key="discount_rate",
+        )
+    )
+    shipping_fee_setting = int(
+        st.number_input(
+            "택배비",
+            min_value=0,
+            value=4000,
+            step=500,
+            key="shipping_fee_setting",
+        )
+    )
+    shipping_enabled = st.toggle(
+        "택배비 적용",
+        value=True,
+        key="shipping_enabled",
+        help="끄면 택배비가 최종 금액에 합산되지 않습니다.",
+    )
 
     st.divider()
-    st.header("입금 안내")
-    bank_account = st.text_input("계좌번호", placeholder="예: 농협 000-0000-0000-00")
-    account_holder = st.text_input("예금주", placeholder="예: 식혜명가")
-
-    st.divider()
-    st.header("자동 인식")
+    st.markdown("## 자동 인식")
     default_size = st.selectbox("크기 미기재 시 기본값", ["1L", "500ml", "200ml 파우치"], index=0)
     st.caption("예: '식혜 3개'처럼 크기가 없으면 이 기준으로 계산")
 
-# =============================
-# 헤더
-# =============================
+    st.divider()
+    st.markdown("## 입금 안내")
+    account_number = st.text_input("계좌번호", placeholder="예: 농협 000-0000-0000-00")
+    account_holder = st.text_input("예금주", placeholder="예: 식혜명가")
+
+
+# -----------------------------
+# Hero
+# -----------------------------
 st.markdown(
     """
-    <div class="hero">
-        <h1>식혜 주문 자동계산기 PRO</h1>
-        <p>수량 버튼으로 빠르게 계산하고, 카톡 주문을 붙여넣어도 자동 인식합니다.<br>
-        상품 합계·할인·택배비·최종 결제금액·고객 발송 문구까지 한 번에 정리합니다.</p>
-        <div class="badge-wrap">
-            <span class="badge">수량 버튼 계산기</span>
-            <span class="badge">카톡 주문 자동 인식</span>
-            <span class="badge">할인율 적용</span>
-            <span class="badge">택배비 합산</span>
-            <span class="badge">계좌 자동 삽입</span>
-            <span class="badge">문구 3종 선택</span>
-        </div>
+<div class="hero">
+    <h1>식혜 주문 자동계산기 PRO</h1>
+    <p>버튼으로 빠르게 수량을 잡고, 카톡 주문 문구도 넓게 인식해 합산 계산합니다.</p>
+    <div class="badge-wrap">
+        <span class="badge">수량 버튼 계산</span>
+        <span class="badge">카톡 문구 자동 인식</span>
+        <span class="badge">택배비 ON/OFF</span>
+        <span class="badge">계좌 문구 자동 삽입</span>
     </div>
-    """,
+</div>
+""",
     unsafe_allow_html=True,
 )
 
-# =============================
-# 입력 영역
-# =============================
-left, right = st.columns([1.55, 1], gap="large")
 
-with left:
-    st.markdown('<div class="section-title">① 수량 버튼 계산기</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">자주 쓰는 주문은 아래 버튼으로 바로 수량을 잡으세요. 붙여넣기 주문과 함께 합산됩니다.</div>', unsafe_allow_html=True)
+# -----------------------------
+# Quantity calculator
+# -----------------------------
+st.markdown('<div class="section-title">① 수량 버튼 계산기</div>', unsafe_allow_html=True)
+st.markdown('<div class="help-text">자주 쓰는 주문은 아래 버튼으로 바로 수량을 올리면 됩니다. 카톡 문구와 함께 합산됩니다.</div>', unsafe_allow_html=True)
 
-    ensure_qty_state()
-    with st.container():
-        for idx, product in enumerate(PRODUCT_ORDER):
-            c1, c2, c3, c4, c5, c6 = st.columns([2.2, 1.2, .7, .7, .7, .7])
-            with c1:
-                st.markdown(
-                    f"""
-                    <div class="product-card">
-                        <div class="product-name">{product}</div>
-                        <div class="product-price">단가 {won(prices[product])}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            with c2:
-                input_key = f"qty_input_{idx}_{st.session_state['qty_version']}"
-                entered_qty = st.number_input(
-                    "수량",
-                    min_value=0,
-                    value=get_qty(product),
-                    step=1,
-                    key=input_key,
-                    label_visibility="collapsed",
-                )
-                if int(entered_qty) != get_qty(product):
-                    set_qty(product, int(entered_qty))
-            with c3:
-                if st.button("-", key=f"minus_{idx}", use_container_width=True):
-                    change_qty(product, -1)
-            with c4:
-                if st.button("+", key=f"plus_{idx}", use_container_width=True):
-                    change_qty(product, 1)
-            with c5:
-                if st.button("+5", key=f"plus5_{idx}", use_container_width=True):
-                    change_qty(product, 5)
-            with c6:
-                if st.button("0", key=f"zero_{idx}", use_container_width=True):
-                    zero_qty(product)
+top_cols = st.columns([1, 1, 5])
+with top_cols[0]:
+    st.button("전체 수량 초기화", on_click=reset_all_qty, use_container_width=True)
+with top_cols[1]:
+    st.caption("버튼 입력 + 문구 입력 합산")
 
-    if st.button("전체 수량 초기화", use_container_width=True):
-        reset_quantities()
+product_cols = st.columns(5)
+for idx, product in enumerate(PRODUCT_ORDER):
+    with product_cols[idx % 5]:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.markdown(f'<div class="product-title">{product}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="price-small">단가 {prices[product]:,}원</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">② 주문내용 붙여넣기</div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-sub">처음엔 예시가 흐리게만 보이며 계산에 적용되지 않습니다. 직접 입력하거나 아래 예시를 복사/불러오기 하세요.</div>', unsafe_allow_html=True)
+        st.number_input(
+            f"{product} 수량",
+            min_value=0,
+            step=1,
+            key=f"qty_{product}",
+            label_visibility="collapsed",
+        )
 
-    col_ex1, col_ex2 = st.columns([1, 1])
-    with col_ex1:
-        with st.expander("예시 문구 복사용", expanded=False):
-            st.code(SAMPLE_TEXT, language="text")
-    with col_ex2:
-        if st.button("예시를 입력창에 넣기", use_container_width=True):
-            st.session_state["order_text"] = SAMPLE_TEXT
+        b1, b2, b3, b4 = st.columns(4)
+        b1.button("-", key=f"minus_{product}", on_click=change_qty, args=(product, -1), use_container_width=True)
+        b2.button("+", key=f"plus_{product}", on_click=change_qty, args=(product, 1), use_container_width=True)
+        b3.button("+5", key=f"plus5_{product}", on_click=change_qty, args=(product, 5), use_container_width=True)
+        b4.button("0", key=f"zero_{product}", on_click=set_qty_zero, args=(product,), use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    if "order_text" not in st.session_state:
-        st.session_state["order_text"] = ""
 
-    order_text = st.text_area(
-        "카톡/문자 주문",
-        placeholder=SAMPLE_TEXT,
-        height=190,
-        key="order_text",
-        label_visibility="collapsed",
+st.markdown('<hr class="soft">', unsafe_allow_html=True)
+
+
+# -----------------------------
+# Text input
+# -----------------------------
+st.markdown('<div class="section-title">② 주문내용 붙여넣기</div>', unsafe_allow_html=True)
+st.markdown('<div class="help-text">카톡 대화처럼 대충 적어도 최대한 인식합니다. 예시는 흐리게만 보이며 계산에는 적용되지 않습니다.</div>', unsafe_allow_html=True)
+
+c1, c2 = st.columns([1, 1])
+with c1:
+    with st.expander("예시 문구 복사용"):
+        st.markdown(f'<div class="copy-box">{EXAMPLE_TEXT}</div>', unsafe_allow_html=True)
+with c2:
+    st.button("예시를 입력창에 넣기", on_click=put_example, use_container_width=True)
+
+order_text = st.text_area(
+    "주문내용 입력",
+    key="order_text",
+    height=190,
+    placeholder=EXAMPLE_TEXT,
+    label_visibility="collapsed",
+)
+
+
+# -----------------------------
+# Calculate
+# -----------------------------
+button_rows = parse_button_orders(prices)
+text_rows = parse_text_orders(order_text, prices, default_size)
+rows = button_rows + text_rows
+
+if rows:
+    df = pd.DataFrame(rows)
+
+    summary = (
+        df.groupby(["품목", "단가"], as_index=False)
+        .agg({"수량": "sum", "금액": "sum"})
     )
+    summary["정렬"] = summary["품목"].map({p: i for i, p in enumerate(PRODUCT_ORDER)}).fillna(99)
+    summary = summary.sort_values("정렬").drop(columns=["정렬"])
 
-# 계산
-manual_rows = get_manual_rows(prices)
-paste_rows, warnings = parse_order(order_text, prices, default_size) if order_text.strip() else ([], [])
-rows = manual_rows + paste_rows
-summary = make_summary(rows)
-
-if not summary.empty:
     total_qty = int(summary["수량"].sum())
     subtotal = int(summary["금액"].sum())
 else:
+    df = pd.DataFrame(columns=["입력방식", "원문", "품목", "수량", "단가", "금액"])
+    summary = pd.DataFrame(columns=["품목", "단가", "수량", "금액"])
     total_qty = 0
     subtotal = 0
 
-discount_amount = int(round(subtotal * (float(discount_rate) / 100)))
-product_after_discount = max(0, subtotal - discount_amount)
-final_amount = product_after_discount + int(shipping_fee if subtotal > 0 else 0)
+discount_amount = int(round(subtotal * (discount_rate / 100)))
+after_discount = max(0, subtotal - discount_amount)
+shipping_fee = shipping_fee_setting if shipping_enabled else 0
+final_amount = after_discount + shipping_fee
+
+
+st.markdown('<hr class="soft">', unsafe_allow_html=True)
+
+metric_cols = st.columns(4)
+metric_cols[0].metric("총 수량", f"{total_qty:,}개")
+metric_cols[1].metric("상품 합계", f"{subtotal:,}원")
+metric_cols[2].metric("할인 적용 후", f"{after_discount:,}원", delta=f"-{discount_amount:,}원")
+metric_cols[3].metric("최종 결제금액", f"{final_amount:,}원", delta=f"택배비 {shipping_fee:,}원")
+
+
+left, right = st.columns([1.45, 1])
+
+with left:
+    st.markdown('<div class="section-title">③ 계산 결과</div>', unsafe_allow_html=True)
+
+    if not summary.empty:
+        show_summary = summary.copy()
+        show_summary["단가"] = show_summary["단가"].map(lambda x: f"{int(x):,}원")
+        show_summary["금액"] = show_summary["금액"].map(lambda x: f"{int(x):,}원")
+        st.dataframe(show_summary, use_container_width=True, hide_index=True)
+    else:
+        st.info("아직 계산된 주문이 없습니다. 수량 버튼을 누르거나 주문 문구를 입력하세요.")
+
+    with st.expander("상세 인식 내역"):
+        if not df.empty:
+            detail = df.copy()
+            detail["단가"] = detail["단가"].map(lambda x: f"{int(x):,}원")
+            detail["금액"] = detail["금액"].map(lambda x: f"{int(x):,}원")
+            st.dataframe(detail, use_container_width=True, hide_index=True)
+        else:
+            st.write("상세 내역 없음")
 
 with right:
     st.markdown(
         f"""
-        <div class="dark-card">
-            <div class="total-label">최종 결제금액</div>
-            <div class="total-money">{won(final_amount)}</div>
-            <div class="mini-grid">
-                <div class="mini-box"><div class="k">총 수량</div><div class="v">{total_qty:,}개</div></div>
-                <div class="mini-box"><div class="k">상품 합계</div><div class="v">{won(subtotal)}</div></div>
-                <div class="mini-box"><div class="k">할인 금액</div><div class="v">-{won(discount_amount)}</div></div>
-                <div class="mini-box"><div class="k">택배비</div><div class="v">{won(int(shipping_fee if subtotal > 0 else 0))}</div></div>
-            </div>
-        </div>
-        """,
+<div class="dark-card">
+    <div class="dark-label">최종 결제금액</div>
+    <div class="big-money">{final_amount:,}원</div>
+    <br>
+    <div>총 수량: <b>{total_qty:,}개</b></div>
+    <div>상품 합계: <b>{subtotal:,}원</b></div>
+    <div>할인 금액: <b>-{discount_amount:,}원</b></div>
+    <div>택배비: <b>{shipping_fee:,}원</b></div>
+</div>
+""",
         unsafe_allow_html=True,
     )
 
-# =============================
-# 결과 영역
-# =============================
-st.markdown("---")
 
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("총 수량", f"{total_qty:,}개")
-m2.metric("상품 합계", won(subtotal))
-m3.metric("할인 적용 후", won(product_after_discount), delta=f"-{won(discount_amount)}")
-m4.metric("최종 결제금액", won(final_amount), delta=f"택배비 {won(int(shipping_fee if subtotal > 0 else 0))}")
+# -----------------------------
+# Message templates
+# -----------------------------
+st.markdown('<hr class="soft">', unsafe_allow_html=True)
+st.markdown('<div class="section-title">④ 고객에게 보낼 계산 문구</div>', unsafe_allow_html=True)
 
-if rows:
-    st.markdown('<div class="section-title">③ 계산 결과</div>', unsafe_allow_html=True)
-    show_summary = summary.copy()
-    show_summary["단가"] = show_summary["단가"].map(won)
-    show_summary["금액"] = show_summary["금액"].map(won)
-    st.dataframe(show_summary, use_container_width=True, hide_index=True)
-
-    with st.expander("상세 인식 내역"):
-        detail = pd.DataFrame(rows)
-        detail["단가"] = detail["단가"].map(won)
-        detail["금액"] = detail["금액"].map(won)
-        st.dataframe(detail, use_container_width=True, hide_index=True)
-
-    st.markdown('<div class="section-title">④ 고객에게 보낼 계산 문구</div>', unsafe_allow_html=True)
-    message_kind = st.selectbox(
-        "문구 형식 선택",
-        ["1. 친절 기본형", "2. 깔끔 영수증형", "3. 입금 안내형"],
-        index=0,
-    )
-
-    auto_message = build_message(
-        message_kind,
+if not summary.empty:
+    templates = build_templates(
         summary,
         subtotal,
-        float(discount_rate),
+        discount_rate,
         discount_amount,
-        product_after_discount,
-        int(shipping_fee if subtotal > 0 else 0),
+        after_discount,
+        shipping_fee,
+        shipping_enabled,
         final_amount,
-        bank_account,
+        account_number,
         account_holder,
     )
-    message_hash = hashlib.md5(auto_message.encode("utf-8")).hexdigest()[:8]
+
+    template_choice = st.selectbox("문구 형식 선택", list(templates.keys()), index=0)
     edited_message = st.text_area(
-        "선택한 문구를 여기서 바로 수정할 수 있습니다.",
-        value=auto_message,
+        "선택 문구 수정",
+        value=templates[template_choice],
         height=260,
-        key=f"customer_message_{message_kind}_{message_hash}",
     )
 
-    col_down1, col_down2 = st.columns(2)
-    with col_down1:
-        csv = summary.to_csv(index=False).encode("utf-8-sig")
-        st.download_button(
-            "계산 결과 CSV 다운로드",
-            data=csv,
-            file_name="sikhye_order_result.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with col_down2:
-        st.download_button(
-            "고객 문구 TXT 다운로드",
-            data=edited_message.encode("utf-8-sig"),
-            file_name="customer_message.txt",
-            mime="text/plain",
-            use_container_width=True,
-        )
+    d1, d2 = st.columns(2)
+
+    csv = summary.to_csv(index=False).encode("utf-8-sig")
+    d1.download_button(
+        "계산 결과 CSV 다운로드",
+        data=csv,
+        file_name=f"sikhye_order_result_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+
+    d2.download_button(
+        "고객 문구 TXT 다운로드",
+        data=edited_message.encode("utf-8-sig"),
+        file_name=f"sikhye_customer_message_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+        mime="text/plain",
+        use_container_width=True,
+    )
 else:
-    st.info("수량 버튼을 누르거나 주문 내용을 입력하면 계산이 시작됩니다. 흐리게 보이는 예시는 계산에 적용되지 않습니다.")
+    st.info("주문이 계산되면 고객 발송 문구가 자동으로 생성됩니다.")
 
-if warnings:
-    with st.expander("인식하지 못한 줄"):
-        for w in warnings:
-            st.write("- " + w)
 
-st.caption("개인정보 보호: 이 앱은 입력 내용을 별도로 저장하지 않습니다. 배포 환경의 로그 설정은 별도 확인이 필요합니다.")
+st.caption("개인정보 보호: 이 앱은 입력 내용을 별도 DB에 저장하지 않습니다. 배포 환경의 로그 정책은 별도 확인하세요.")
