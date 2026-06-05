@@ -47,73 +47,76 @@ st.markdown(
 :root {
     --ink: #0f172a;
     --muted: #64748b;
-    --line: rgba(148, 163, 184, 0.35);
-    --soft: #f1f5f9;
-    --soft2: #e2e8f0;
-    --navy: #0f172a;
+    --line: rgba(148, 163, 184, 0.34);
+    --soft: #f8fafc;
+    --softbox: #f1f5f9;
+    --navy1: #0f172a;
+    --navy2: #1e293b;
+    --navy3: #334155;
     --gold: #fbbf24;
+    --teal: #22c55e;
+    --red: #ef4444;
 }
 .stApp {
     background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, .10), transparent 30%),
+        radial-gradient(circle at top left, rgba(59,130,246,.09), transparent 28%),
+        radial-gradient(circle at top right, rgba(251,191,36,.08), transparent 25%),
         linear-gradient(135deg, #f8fafc 0%, #eef2f7 48%, #f8fafc 100%);
 }
 .block-container {
-    padding-top: 1.6rem;
+    padding-top: 1.4rem;
     padding-bottom: 3rem;
 }
+
+/* HERO */
 .hero {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 58%, #334155 100%);
+    background: linear-gradient(135deg, #111827 0%, #1b2940 56%, #31445f 100%);
     color: white;
-    padding: 30px 34px;
+    padding: 32px 34px;
     border-radius: 28px;
-    box-shadow: 0 24px 55px rgba(15, 23, 42, .22);
+    box-shadow: 0 22px 48px rgba(15, 23, 42, .22);
     margin-bottom: 22px;
     overflow: hidden;
 }
 .hero-grid {
     display: grid;
-    grid-template-columns: 1.2fr .95fr;
-    gap: 24px;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 22px;
     align-items: center;
 }
-.hero-text h1 {
-    margin: 0 0 12px 0;
-    font-size: 34px;
-    line-height: 1.16;
+.hero-title {
+    font-size: 40px;
+    font-weight: 950;
     letter-spacing: -0.05em;
+    margin: 0 0 10px 0;
 }
-.hero-text p {
+.hero-sub {
     color: #dbeafe;
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.6;
-}
-.hero-illu {
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 24px;
-    padding: 14px;
-    backdrop-filter: blur(4px);
+    font-size: 17px;
+    line-height: 1.65;
+    margin-bottom: 18px;
 }
 .badge-wrap {
     display: flex;
-    gap: 8px;
+    gap: 9px;
     flex-wrap: wrap;
-    margin-top: 18px;
 }
 .badge {
-    background: rgba(255,255,255,.92);
-    color: #1e3a8a;
-    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 13px;
     border-radius: 999px;
+    background: rgba(255,255,255,.94);
+    color: #1e3a8a;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 900;
 }
-@media (max-width: 980px) {
-    .hero-grid {
-        grid-template-columns: 1fr;
-    }
+.hero-illus {
+    background: linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 24px;
+    padding: 14px;
+    backdrop-filter: blur(6px);
 }
 .section-title {
     font-size: 25px;
@@ -140,12 +143,14 @@ st.markdown(
     margin-bottom: 10px;
 }
 .summary-card {
-    background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #111827 50%, #14213a 100%);
     color: white;
-    border-radius: 26px;
+    border-radius: 28px;
     padding: 28px 30px;
-    box-shadow: 0 22px 52px rgba(15, 23, 42, .30);
+    box-shadow: 0 24px 54px rgba(15, 23, 42, .30);
     border: 1px solid rgba(255,255,255,.08);
+    position: sticky;
+    top: 1rem;
 }
 .summary-card .label {
     color: #93c5fd;
@@ -154,34 +159,29 @@ st.markdown(
     margin-bottom: 6px;
 }
 .summary-card .money {
-    font-size: 46px;
+    font-size: 48px;
     font-weight: 950;
     color: #fbbf24;
     letter-spacing: -0.06em;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 .summary-row {
     display: flex;
     justify-content: space-between;
-    border-top: 1px solid rgba(255,255,255,.12);
-    padding-top: 11px;
-    margin-top: 11px;
+    border-top: 1px solid rgba(255,255,255,.11);
+    padding-top: 12px;
+    margin-top: 12px;
     font-size: 16px;
 }
 .summary-row b {
     font-size: 18px;
 }
 .mini-metric {
-    background: rgba(255,255,255,.78);
+    background: rgba(255,255,255,.86);
     border: 1px solid var(--line);
     border-radius: 18px;
     padding: 16px 18px;
     box-shadow: 0 10px 24px rgba(15,23,42,.05);
-}
-hr.soft {
-    border: none;
-    border-top: 1px solid rgba(148,163,184,.35);
-    margin: 28px 0;
 }
 .copy-box {
     background: #f8fafc;
@@ -192,25 +192,144 @@ hr.soft {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     color: #334155;
 }
+hr.soft {
+    border: none;
+    border-top: 1px solid rgba(148,163,184,.35);
+    margin: 28px 0;
+}
+
+/* Product box */
 div[data-testid="stVerticalBlockBorderWrapper"] {
-    background: rgba(241,245,249,.92);
-    border: 1px solid rgba(148,163,184,.40);
+    background: rgba(241,245,249,.96);
+    border: 1px solid rgba(148,163,184,.42);
     border-radius: 22px;
     box-shadow: 0 12px 26px rgba(15,23,42,.05);
 }
+
+/* Buttons bigger */
 div[data-testid="stButton"] > button {
-    border-radius: 14px !important;
-    border: 1px solid rgba(148,163,184,.42) !important;
-    font-size: 20px !important;
+    min-height: 46px;
+    font-size: 18px !important;
     font-weight: 900 !important;
-    min-height: 48px !important;
-    line-height: 1 !important;
-    background: #ffffff !important;
-    color: #0f172a !important;
+    border-radius: 14px !important;
 }
-div[data-testid="stButton"] > button:hover {
-    border-color: rgba(37,99,235,.52) !important;
-    color: #1d4ed8 !important;
+
+/* Make +/- rows feel like calculator buttons */
+div[data-testid="stButton"] > button[kind="secondary"] {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(148,163,184,.55);
+    box-shadow: 0 3px 10px rgba(15,23,42,.06);
+}
+
+/* Textareas */
+div[data-testid="stTextArea"] textarea {
+    font-size: 16px;
+    line-height: 1.55;
+}
+
+/* Select */
+div[data-baseweb="select"] > div {
+    border-radius: 12px;
+}
+
+/* Pure HTML illustration - no SVG, prevents Streamlit from printing SVG code */
+.hero-illus {
+    background: linear-gradient(135deg, rgba(255,255,255,.13), rgba(255,255,255,.05));
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 26px;
+    padding: 20px;
+    min-height: 230px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.illu-stage {
+    width: 100%;
+    max-width: 470px;
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 18px;
+    align-items: center;
+}
+.illu-phone {
+    background: linear-gradient(180deg, #f8fafc 0%, #dbeafe 100%);
+    border-radius: 28px;
+    padding: 18px;
+    box-shadow: 0 18px 35px rgba(0,0,0,.18);
+}
+.illu-screen {
+    background: #0f172a;
+    border-radius: 20px;
+    padding: 16px;
+}
+.illu-money {
+    color: #fbbf24;
+    font-size: 25px;
+    font-weight: 950;
+    letter-spacing: -0.05em;
+    margin-bottom: 14px;
+}
+.illu-keyrow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.illu-key {
+    background: #eff6ff;
+    color: #1e3a8a;
+    border-radius: 12px;
+    text-align: center;
+    padding: 8px 0;
+    font-weight: 950;
+    font-size: 18px;
+}
+.illu-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.illu-card {
+    background: rgba(255,255,255,.94);
+    border: 1px solid rgba(219,234,254,.8);
+    border-radius: 20px;
+    padding: 14px 16px;
+    box-shadow: 0 12px 26px rgba(15,23,42,.12);
+}
+.illu-card-title {
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 950;
+    margin-bottom: 8px;
+}
+.illu-line {
+    height: 10px;
+    background: #cbd5e1;
+    border-radius: 999px;
+    margin: 7px 0;
+}
+.illu-line.short { width: 68%; }
+.illu-line.blue { background: #93c5fd; width: 86%; }
+.illu-check {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2563eb, #0ea5e9);
+    color: white;
+    align-items: center;
+    justify-content: center;
+    font-weight: 950;
+    margin-right: 8px;
+}
+
+@media (max-width: 900px) {
+    .hero-grid {
+        grid-template-columns: 1fr;
+    }
+    .hero-title {
+        font-size: 32px;
+    }
 }
 </style>
 """,
@@ -269,7 +388,6 @@ SIZE_RE = "|".join(re.escape(x) for x in sorted(SIZE_WORDS, key=len, reverse=Tru
 QTY_WORDS = list(KOR_NUM.keys()) + [str(i) for i in range(1, 1000)]
 QTY_RE = "|".join(re.escape(x) for x in sorted(QTY_WORDS, key=len, reverse=True))
 UNIT_RE = r"(?:개|병|통|팩|봉|개입|파우치|잔|박스|box)?"
-
 
 PATTERNS = [
     re.compile(
@@ -424,6 +542,7 @@ def build_templates(summary, subtotal, discount_rate, discount_amount, shipping_
     account_text = account.strip() if account and account.strip() else "계좌번호 미입력"
     depositor_text = depositor.strip() if depositor and depositor.strip() else "예금주 미입력"
     real_shipping = shipping_fee if shipping_enabled else 0
+    shipping_note = "택배비는 업체에서 부담합니다." if not shipping_enabled else ""
 
     basic = "\n".join([
         "안녕하세요. 주문 금액 안내드립니다.",
@@ -434,6 +553,7 @@ def build_templates(summary, subtotal, discount_rate, discount_amount, shipping_
         f"할인 {discount_rate:.1f}% = -{discount_amount:,}원",
         f"택배비 = {real_shipping:,}원",
         f"최종 결제금액 = {final_amount:,}원",
+        *( [shipping_note] if shipping_note else [] ),
         "",
         "확인 부탁드립니다. 감사합니다.",
     ])
@@ -448,6 +568,7 @@ def build_templates(summary, subtotal, discount_rate, discount_amount, shipping_
         f"택배비          {real_shipping:,}원",
         "--------------------",
         f"최종 결제금액   {final_amount:,}원",
+        *( ["※ 택배비는 업체 부담"] if not shipping_enabled else [] ),
     ])
 
     deposit = "\n".join([
@@ -459,6 +580,7 @@ def build_templates(summary, subtotal, discount_rate, discount_amount, shipping_
         f"할인 금액: -{discount_amount:,}원",
         f"택배비: {real_shipping:,}원",
         f"입금하실 금액: {final_amount:,}원",
+        *( [shipping_note] if shipping_note else [] ),
         "",
         f"입금계좌: {account_text}",
         f"예금주: {depositor_text}",
@@ -466,29 +588,26 @@ def build_templates(summary, subtotal, discount_rate, discount_amount, shipping_
         "입금 후 성함 남겨주시면 확인하겠습니다.",
     ])
 
-    templates = {
+    free_shipping = "\n".join([
+        "안녕하세요. 무료배송으로 주문 금액 안내드립니다.",
+        "",
+        *item_lines,
+        "",
+        f"상품 합계 = {subtotal:,}원",
+        f"할인 {discount_rate:.1f}% = -{discount_amount:,}원",
+        "택배비 = 0원",
+        "택배비는 업체에서 부담합니다.",
+        f"최종 결제금액 = {final_amount:,}원",
+        "",
+        "확인 부탁드립니다. 감사합니다.",
+    ])
+
+    return {
         "1. 친절 기본형": basic,
         "2. 깔끔 영수증형": receipt,
         "3. 입금 안내형": deposit,
+        "4. 무료배송 안내형": free_shipping,
     }
-
-    if not shipping_enabled:
-        free_shipping = "\n".join([
-            "안녕하세요. 주문 금액 안내드립니다.",
-            "",
-            *item_lines,
-            "",
-            f"상품 합계 = {subtotal:,}원",
-            f"할인 {discount_rate:.1f}% = -{discount_amount:,}원",
-            "택배비 = 0원",
-            f"최종 결제금액 = {final_amount:,}원",
-            "",
-            "택배비는 업체에서 부담합니다.",
-            "확인 부탁드립니다. 감사합니다.",
-        ])
-        templates["4. 무료배송 안내형"] = free_shipping
-
-    return templates
 
 
 with st.sidebar:
@@ -501,7 +620,7 @@ with st.sidebar:
     st.markdown("## 할인 / 배송")
     discount_rate = float(st.number_input("상품 전체 할인율 (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0))
     shipping_fee_setting = int(st.number_input("택배비", min_value=0, value=4000, step=500))
-    shipping_enabled = st.toggle("택배비 적용", value=True, help="끄면 택배비는 0원으로 처리되고 무료배송 안내형 문구도 함께 사용할 수 있습니다.")
+    shipping_enabled = st.toggle("택배비 적용", value=True, help="끄면 택배비가 최종금액에 합산되지 않습니다.")
 
     st.divider()
     st.markdown("## 자동 인식")
@@ -536,63 +655,50 @@ after_discount = max(0, subtotal - discount_amount)
 shipping_fee = shipping_fee_setting if shipping_enabled else 0
 final_amount = after_discount + shipping_fee
 
-
 st.markdown(
-    f"""
+    """
 <div class="hero">
     <div class="hero-grid">
-        <div class="hero-text">
-            <h1>식혜 주문 자동계산기 PRO</h1>
-            <p>왼쪽에서 상품 수량을 빠르게 누르고, 오른쪽에서 최종금액을 한눈에 확인하세요.<br>카톡 문구 자동 인식, 무료배송 안내형 문구, 계좌안내까지 한 번에 처리합니다.</p>
+        <div>
+            <div class="hero-title">식혜 주문 자동계산기 PRO</div>
+            <div class="hero-sub">왼쪽에서 상품 수량을 빠르게 누르고, 오른쪽에서 최종금액을 바로 확인합니다.<br>카톡 주문 문구 인식, 무료배송 문구, 입금 안내 문구까지 한 번에 처리합니다.</div>
             <div class="badge-wrap">
                 <span class="badge">세로형 수량 계산</span>
                 <span class="badge">카톡 문구 자동 인식</span>
                 <span class="badge">택배비 ON/OFF</span>
-                <span class="badge">무료배송 문구 지원</span>
-                <span class="badge">계좌 문구 자동 삽입</span>
+                <span class="badge">무료배송 문구 추가</span>
+                <span class="badge">계좌문구 자동 삽입</span>
             </div>
         </div>
-        <div class="hero-illu">
-            <svg viewBox="0 0 420 220" width="100%" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="cardA" x1="0" x2="1">
-                        <stop offset="0%" stop-color="#eff6ff"/>
-                        <stop offset="100%" stop-color="#dbeafe"/>
-                    </linearGradient>
-                    <linearGradient id="cardB" x1="0" x2="1">
-                        <stop offset="0%" stop-color="#f8fafc"/>
-                        <stop offset="100%" stop-color="#e2e8f0"/>
-                    </linearGradient>
-                    <linearGradient id="gold" x1="0" x2="1">
-                        <stop offset="0%" stop-color="#fde68a"/>
-                        <stop offset="100%" stop-color="#fbbf24"/>
-                    </linearGradient>
-                </defs>
-                <rect x="16" y="28" rx="20" ry="20" width="170" height="164" fill="url(#cardA)"/>
-                <rect x="34" y="46" rx="12" ry="12" width="136" height="42" fill="#0f172a"/>
-                <text x="48" y="72" fill="#ffffff" font-size="22" font-weight="900">₩ {final_amount:,}</text>
-                <rect x="34" y="105" rx="10" ry="10" width="40" height="34" fill="#ffffff"/>
-                <rect x="80" y="105" rx="10" ry="10" width="40" height="34" fill="#ffffff"/>
-                <rect x="126" y="105" rx="10" ry="10" width="40" height="34" fill="#ffffff"/>
-                <text x="47" y="126" fill="#1d4ed8" font-size="16" font-weight="900">+</text>
-                <text x="93" y="126" fill="#1d4ed8" font-size="16" font-weight="900">+5</text>
-                <text x="140" y="126" fill="#1d4ed8" font-size="16" font-weight="900">0</text>
-                <rect x="34" y="152" rx="10" ry="10" width="136" height="24" fill="#ffffff"/>
-                <rect x="44" y="159" rx="6" ry="6" width="68" height="10" fill="#cbd5e1"/>
-                <rect x="116" y="159" rx="6" ry="6" width="42" height="10" fill="#93c5fd"/>
-
-                <rect x="204" y="38" rx="20" ry="20" width="200" height="144" fill="url(#cardB)"/>
-                <rect x="222" y="54" rx="10" ry="10" width="164" height="28" fill="#ffffff"/>
-                <text x="236" y="72" fill="#334155" font-size="14" font-weight="800">주문 자동 인식 결과</text>
-                <circle cx="246" cy="106" r="14" fill="#ffffff" stroke="#cbd5e1"/>
-                <rect x="268" y="95" rx="8" ry="8" width="108" height="22" fill="#ffffff"/>
-                <text x="278" y="110" fill="#0f172a" font-size="12" font-weight="800">일반식혜 1L × 3</text>
-                <circle cx="246" cy="138" r="14" fill="#ffffff" stroke="#cbd5e1"/>
-                <rect x="268" y="127" rx="8" ry="8" width="108" height="22" fill="#ffffff"/>
-                <text x="278" y="142" fill="#0f172a" font-size="12" font-weight="800">단호박식혜 500ml × 2</text>
-                <rect x="268" y="156" rx="9" ry="9" width="82" height="22" fill="url(#gold)"/>
-                <text x="284" y="171" fill="#0f172a" font-size="12" font-weight="900">합계 확인</text>
-            </svg>
+        <div class="hero-illus">
+            <div class="illu-stage">
+                <div class="illu-phone">
+                    <div class="illu-screen">
+                        <div class="illu-money">28,000원</div>
+                        <div class="illu-keyrow">
+                            <div class="illu-key">-</div>
+                            <div class="illu-key">+</div>
+                            <div class="illu-key">+5</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="illu-panel">
+                    <div class="illu-card">
+                        <div class="illu-card-title"><span class="illu-check">✓</span>주문 자동 인식</div>
+                        <div class="illu-line blue"></div>
+                        <div class="illu-line short"></div>
+                    </div>
+                    <div class="illu-card">
+                        <div class="illu-card-title">식혜 1L × 3</div>
+                        <div class="illu-line"></div>
+                        <div class="illu-line blue"></div>
+                    </div>
+                    <div class="illu-card">
+                        <div class="illu-card-title">무료배송 문구 자동 생성</div>
+                        <div class="illu-line blue"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -618,7 +724,7 @@ with main_left:
             st.markdown(f'<div class="product-name">{product}</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="product-price">단가 {prices[product]:,}원</div>', unsafe_allow_html=True)
 
-            q1, q2 = st.columns([1.1, 1.6])
+            q1, q2 = st.columns([1.1, 1.8])
             with q1:
                 st.number_input(
                     f"{product} 수량",
@@ -679,7 +785,6 @@ order_text = st.text_area(
     label_visibility="collapsed",
 )
 
-# Recalculate after text_area update
 button_rows = parse_button_orders(prices)
 text_rows = parse_text_orders(order_text, prices, default_size)
 rows = button_rows + text_rows
@@ -740,7 +845,7 @@ with result_right:
             subtotal,
             discount_rate,
             discount_amount,
-            shipping_fee,
+            shipping_fee_setting,
             shipping_enabled,
             final_amount,
             account_number,
@@ -751,7 +856,7 @@ with result_right:
         edited_message = st.text_area(
             "선택 문구 수정",
             value=templates[template_choice],
-            height=250,
+            height=290,
         )
 
         d1, d2 = st.columns(2)
