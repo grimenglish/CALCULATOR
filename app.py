@@ -564,64 +564,85 @@ def build_templates(summary, subtotal, discount_rate, discount_amount, shipping_
     depositor_text = depositor.strip() if depositor and depositor.strip() else "예금주 미입력"
     real_shipping = shipping_fee if shipping_enabled else 0
     shipping_note = "택배비는 업체에서 부담합니다." if not shipping_enabled else ""
+    has_discount = discount_rate > 0 and discount_amount > 0
 
-    basic = "\n".join([
+    basic_lines = [
         "안녕하세요. 주문 금액 안내드립니다.",
         "",
         *item_lines,
         "",
         f"상품 합계 = {subtotal:,}원",
-        f"할인 {discount_rate:.1f}% = -{discount_amount:,}원",
+    ]
+    if has_discount:
+        basic_lines.append(f"할인 {discount_rate:.1f}% = -{discount_amount:,}원")
+    basic_lines.extend([
         f"택배비 = {real_shipping:,}원",
         f"최종 결제금액 = {final_amount:,}원",
-        *( [shipping_note] if shipping_note else [] ),
-        "",
-        "확인 부탁드립니다. 감사합니다.",
     ])
+    if shipping_note:
+        basic_lines.append(shipping_note)
+    basic_lines.extend(["", "확인 부탁드립니다. 감사합니다."])
+    basic = "\n".join(basic_lines)
 
-    receipt = "\n".join([
+    receipt_lines = [
         "[식혜명가 주문 계산서]",
         "--------------------",
         *item_lines,
         "--------------------",
         f"상품 합계       {subtotal:,}원",
-        f"할인 금액      -{discount_amount:,}원",
+    ]
+    if has_discount:
+        receipt_lines.append(f"할인 금액      -{discount_amount:,}원")
+    receipt_lines.extend([
         f"택배비          {real_shipping:,}원",
         "--------------------",
         f"최종 결제금액   {final_amount:,}원",
-        *( ["※ 택배비는 업체 부담"] if not shipping_enabled else [] ),
     ])
+    if not shipping_enabled:
+        receipt_lines.append("※ 택배비는 업체 부담")
+    receipt = "\n".join(receipt_lines)
 
-    deposit = "\n".join([
+    deposit_lines = [
         "주문 금액 안내드립니다.",
         "",
         *item_lines,
         "",
         f"상품 합계: {subtotal:,}원",
-        f"할인 금액: -{discount_amount:,}원",
+    ]
+    if has_discount:
+        deposit_lines.append(f"할인 금액: -{discount_amount:,}원")
+    deposit_lines.extend([
         f"택배비: {real_shipping:,}원",
         f"입금하실 금액: {final_amount:,}원",
-        *( [shipping_note] if shipping_note else [] ),
+    ])
+    if shipping_note:
+        deposit_lines.append(shipping_note)
+    deposit_lines.extend([
         "",
         f"입금계좌: {account_text}",
         f"예금주: {depositor_text}",
         "",
         "입금 후 성함 남겨주시면 확인하겠습니다.",
     ])
+    deposit = "\n".join(deposit_lines)
 
-    free_shipping = "\n".join([
+    free_shipping_lines = [
         "안녕하세요. 무료배송으로 주문 금액 안내드립니다.",
         "",
         *item_lines,
         "",
         f"상품 합계 = {subtotal:,}원",
-        f"할인 {discount_rate:.1f}% = -{discount_amount:,}원",
+    ]
+    if has_discount:
+        free_shipping_lines.append(f"할인 {discount_rate:.1f}% = -{discount_amount:,}원")
+    free_shipping_lines.extend([
         "택배비 = 0원",
         "택배비는 업체에서 부담합니다.",
         f"최종 결제금액 = {final_amount:,}원",
         "",
         "확인 부탁드립니다. 감사합니다.",
     ])
+    free_shipping = "\n".join(free_shipping_lines)
 
     return {
         "1. 친절 기본형": basic,
@@ -629,7 +650,6 @@ def build_templates(summary, subtotal, discount_rate, discount_amount, shipping_
         "3. 입금 안내형": deposit,
         "4. 무료배송 안내형": free_shipping,
     }
-
 
 with st.sidebar:
     st.markdown("## 가격 설정")
