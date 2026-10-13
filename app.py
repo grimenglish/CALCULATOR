@@ -182,11 +182,14 @@ def make_messages(order: dict[str, Any], account: str, owner: str) -> dict[str, 
                    "--------------------", f"상품 합계  {total:,}원",
                    f"할인 금액  -{discount:,}원" if discount else None,
                    f"택배비  {shipping:,}원", "※ 택배비는 업체 부담" if free_note else None,
-                   "--------------------", f"최종 결제금액  {final:,}원")
+                   "--------------------", f"최종 결제금액  {final:,}원", "",
+                   f"입금계좌: {account.strip() or '미입력'}",
+                   f"예금주: {owner.strip() or '미입력'}", "",
+                   "감사합니다.")
     deposit = join("안녕하세요. 주문 금액 및 입금계좌 안내드립니다.", "", *lines, "",
                    f"상품 합계: {total:,}원", disc2, f"택배비: {shipping:,}원", free_note,
                    f"입금하실 금액: {final:,}원", "", f"입금계좌: {account.strip() or '미입력'}",
-                   f"예금주: {owner.strip() or '미입력'}", "", "입금 후 성함 알려주시면 확인하겠습니다.")
+                   f"예금주: {owner.strip() or '미입력'}", "", "감사합니다.")
     shipping_note = free_note or "택배비는 고객 부담으로 계산되었습니다."
     shipping_template = join("[식혜명가 배송비 안내]", "", *lines, "",
                              f"상품 합계 = {total:,}원", disc1, f"택배비 = {shipping:,}원",
