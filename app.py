@@ -1,9 +1,7 @@
-"""식혜 주문 자동계산기 PRO v12 - 모바일/PC 반응형 단일 Streamlit 앱."""
+"""식혜 주문 자동계산기 PRO v13 - 모바일 화면 수리, 합계 카드 안전 렌더링."""
 import hashlib
 import re
-from datetime import datetime
 from html import escape
-
 import pandas as pd
 import streamlit as st
 
@@ -20,102 +18,57 @@ EXAMPLE = "식혜 1L 3개\n호박감주 500ml 2개\n200x4\n식혜 1L 4개랑 단
 DEFAULT_BANK = "3333-29-8917220"
 DEFAULT_OWNER = "이서백(식혜명가)"
 
-CSS = """
-<style>
-:root { --ink:#152237; --muted:#61738c; --border:#dce4ef; --blue:#2558bf; }
-.stApp { background:linear-gradient(145deg,#f8fbff 0%,#edf3fa 58%,#f8fbff 100%); }
-.block-container { max-width:1280px; padding-top:1.3rem; padding-bottom:4rem; }
-/* Hide unused sidebar toggle/empty-space, since settings are now on the page. */
-[data-testid="stSidebar"] { display:none !important; }
-[data-testid="collapsedControl"] { display:none !important; }
-.hero { display:flex; align-items:center; justify-content:space-between; gap:1.5rem; padding:22px 28px;
-        background:linear-gradient(115deg,#111e34,#263f66); border-radius:22px; color:white;
-        box-shadow:0 13px 30px #0b1e3930; margin-bottom:20px; }
-.hero h1 { font-size:28px; line-height:1.15; letter-spacing:-.04em; font-weight:900; margin:0 0 6px; }
-.hero p { margin:0; color:#d4e6ff; font-size:14px; }
-.hero-tag { border:1px solid #b9d4fb88; color:#e6f2ff; border-radius:24px; padding:7px 12px;
-            font-weight:750; white-space:nowrap; font-size:12px; }
-.section-label { color:#152237; font-size:22px; font-weight:900; margin:.3rem 0 .55rem; letter-spacing:-.035em; }
-.sub-note { color:#64748b; font-size:13px; margin-bottom:10px; }
-/* Group cards */
-div[data-testid="stVerticalBlockBorderWrapper"] { background:#f3f6fa; border:1px solid #d8e1ed;
-    border-radius:18px; box-shadow:0 2px 6px #16376408; }
-.product-name { color:#142033; font-size:17px; font-weight:850; margin-bottom:3px; }
-.product-price { color:#62738c; font-size:13px; margin-bottom:4px; }
-/* Calculator buttons, 54px touch targets */
-div[class*="st-key-qbtn_"] button { min-height:52px !important; width:100%; border:1px solid #cedbec;
-    border-radius:14px !important; background:#fff !important; box-shadow:0 2px 6px #122c4a14; }
-div[class*="st-key-qbtn_"] button p,div[class*="st-key-qbtn_"] button span {
-    font-size:22px !important; font-weight:900 !important; line-height:1 !important; color:#1a355f !important; }
-div[class*="st-key-qbtn_"] button:hover { border-color:#4c78db; background:#f1f6ff !important; }
-div[data-testid="stNumberInput"] input { font-size:18px !important; font-weight:800 !important; }
-/* Specific pricing controls clearly visible even on mobile */
-div[class*="st-key-shipping_on"] label { font-weight:850 !important; }
-div[data-testid="stMetricValue"] { font-weight:850; }
-div[data-testid="stTextArea"] textarea { font-size:16px !important; line-height:1.55; }
-.total-card { border-radius:20px; padding:23px 25px; background:linear-gradient(140deg,#101c31,#203655);
-    color:#fff; box-shadow:0 12px 28px #14274530; }
-.total-title { color:#bdd7fb; font-weight:800; font-size:13px; }
-.total-number { color:#ffcd4e; font-size:43px; font-weight:950; letter-spacing:-.045em; margin:6px 0 14px; white-space:nowrap; }
-.total-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 0;
-    border-top:1px solid #ffffff22; font-size:14px; color:#e7eef9; }
-.total-row strong { color:#fff; font-size:15px; }
-.ship-free { background:#ddfaeb; color:#16643c; padding:4px 9px; border-radius:8px; font-weight:800; font-size:12px; }
-.ship-pay { background:#e2eeff; color:#174ea6; padding:4px 9px; border-radius:8px; font-weight:800; font-size:12px; }
-.quick-summary { background:#e9f2ff; border:1px solid #c9dcf8; border-radius:16px; padding:14px 16px; margin:5px 0 14px; }
-.quick-label { color:#3d6395; font-weight:800; font-size:12px; }
-.quick-value { font-size:27px; font-weight:950; color:#173a77; margin-top:2px; }
-.foot-note { font-size:12px; color:#7b8799; }
-.desktop-only { display:block; }
-.mobile-only { display:none; }
-@media(max-width: 760px) {
-  .block-container { padding: .7rem .85rem 2.8rem !important; }
-  .hero { padding:15px 17px; border-radius:16px; margin-bottom:12px; }
-  .hero h1 { font-size:22px; }
-  .hero p { font-size:12px; }
-  .hero-tag { display:none; }
-  .section-label { font-size:19px; }
-  .desktop-only { display:none !important; }
-  .mobile-only { display:block !important; }
-  .total-card { padding:17px 19px; border-radius:17px; }
-  .total-number { font-size:34px; margin:3px 0 8px; }
-  .total-row { font-size:13px; padding:7px 0; }
-  .total-row strong { font-size:14px; }
-  .product-name { font-size:16px; }
-  div[class*="st-key-qbtn_"] button { min-height:49px !important; border-radius:12px !important; }
-  div[class*="st-key-qbtn_"] button p { font-size:23px !important; }
-  div[data-testid="stNumberInput"] input { font-size:18px !important; }
-  div[data-testid="stTextArea"] textarea { font-size:16px !important; }
-  /* Outer Streamlit column gutter is smaller on phones */
-  div[data-testid="stVerticalBlockBorderWrapper"] { border-radius:15px; }
-  /* Keep FOUR calculator keys on one row, even on narrow phones. */
-  div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-qbtn_"]) {
-     flex-direction:row !important; flex-wrap:nowrap !important; gap:6px !important;
-  }
-  div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-qbtn_"]) > div[data-testid="stColumn"] {
-     flex:1 1 0 !important; min-width:0 !important; width:auto !important;
-  }
-  /* Settings are never squeezed into two tiny columns on phones. */
-  div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-shipping_on"]),
-  div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-price_0"]) {
-     flex-direction:column !important;
-  }
-  div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-shipping_on"]) > div[data-testid="stColumn"],
-  div[data-testid="stHorizontalBlock"]:has(div[class*="st-key-price_0"]) > div[data-testid="stColumn"] {
-     flex:1 1 auto !important; width:100% !important; min-width:0 !important;
-  }
-  /* Main two-column desktop layout becomes a single full-width column on phones. */
-  div[data-testid="stHorizontalBlock"]:has(.product-name) {
-     flex-direction:column !important;
-  }
-  div[data-testid="stHorizontalBlock"]:has(.product-name) > div[data-testid="stColumn"] {
-     flex:1 1 auto !important; width:100% !important; min-width:0 !important;
-  }
+# CSS는 시각 요소에만 쓰고 계산값/고객 문구는 Streamlit 기본 컴포넌트로 표시합니다.
+st.markdown(r'''<style>
+:root { --ink:#13233a; --muted:#66788d; --border:#d7e2ee; }
+.stApp { background:linear-gradient(145deg,#f8fbff 0%,#edf3fa 55%,#f8fbff 100%); }
+.block-container { max-width:1200px; padding-top:1.3rem; padding-bottom:3rem; }
+[data-testid="stSidebar"], [data-testid="collapsedControl"] {display:none!important;}
+.hero { border-radius:20px; background:linear-gradient(110deg,#101d32,#294369); color:#fff; padding:23px 28px; margin-bottom:18px; box-shadow:0 12px 25px #20304a20; }
+.hero-kicker {color:#bcd8ff; font-size:12px; font-weight:750; margin-bottom:4px;}
+.hero-title { font-size:27px; font-weight:900; letter-spacing:-.04em; line-height:1.25; }
+.hero-desc { font-size:13px; color:#d7e7fe; margin-top:6px; }
+.section-title {font-size:21px; font-weight:900; color:#14223a; letter-spacing:-.025em; padding:4px 0 8px; }
+.caption-small {font-size:13px; color:#64748b; margin-bottom:8px;}
+/* 모바일에서도 배송비 설정과 수량 카드 영역을 읽기 쉽게 */
+div[class*="st-key-prod_"] { background:#f1f5f9!important; border:1px solid #d4dfec!important; border-radius:16px!important; padding:13px 14px!important; margin-bottom:6px; }
+div[class*="st-key-prod_"] .stMarkdown { margin-bottom:0!important; }
+div[class*="st-key-prod_"] [data-testid="stNumberInput"] input {font-size:19px!important; font-weight:850!important;}
+/* 네 개의 계산기 버튼: 굵고 큼. 동시에 글자가 잘리지 않도록 min-width 없앰 */
+div[class*="st-key-qbtn_"] button {height:46px!important; width:100%!important; min-width:0!important; padding:0 2px!important; border-radius:12px!important; border:1px solid #c7d5e7!important; background:#fff!important;}
+div[class*="st-key-qbtn_"] button p, div[class*="st-key-qbtn_"] button span { font-size:clamp(15px,1.55vw,19px)!important; font-weight:900!important; white-space:nowrap!important; color:#15345a!important; }
+/* 합계는 raw HTML 대신 기본 요소를 쓰므로 코드 노출이 없음 */
+div.st-key-mobile_total, div.st-key-desktop_total { background:linear-gradient(135deg,#12223c,#243d5d)!important; border:0!important; border-radius:18px!important; padding:18px 20px!important; box-shadow:0 12px 28px #13253b25!important; }
+div.st-key-mobile_total *,div.st-key-desktop_total * {color:#edf4ff!important;}
+div.st-key-mobile_total [data-testid="stMetricValue"], div.st-key-desktop_total [data-testid="stMetricValue"] {color:#ffcd51!important; font-size:34px!important; font-weight:900!important;}
+div.st-key-mobile_total [data-testid="stMetricLabel"],div.st-key-desktop_total [data-testid="stMetricLabel"] {color:#b9d8ff!important;}
+div.st-key-mobile_total p,div.st-key-desktop_total p {line-height:1.5!important;}
+/* PC에서만 우측 합계 표시 */
+.st-key-mobile_total {display:none!important;}
+@media (max-width:800px) {
+  .block-container { padding: .85rem .75rem 2rem!important; max-width:100%!important; }
+  .hero {padding:17px; border-radius:15px; margin-bottom:12px;}
+  .hero-title {font-size:21px;}
+  .hero-desc {font-size:12px;}
+  .section-title {font-size:18px;}
+  /* Streamlit 그리드가 웹뷰에서 자동으로 접히지 않는 경우를 강제로 보정 */
+  div[data-testid="stHorizontalBlock"]:has(.st-key-desktop_total) {flex-direction:column!important;flex-wrap:nowrap!important;gap:0!important;width:100%!important;}
+  div[data-testid="stHorizontalBlock"]:has(.st-key-desktop_total) > div[data-testid="stColumn"] {flex:1 1 auto!important; width:100%!important;max-width:100%!important;min-width:0!important;}
+  .st-key-mobile_total {display:block!important;}
+  .st-key-desktop_total {display:none!important;}
+  /* 모바일 4버튼은 반드시 한 줄; 폰 화면 전체 너비 사용 */
+  div[class*="st-key-keypad_"] div[data-testid="stHorizontalBlock"] {flex-direction:row!important;flex-wrap:nowrap!important;gap:6px!important;width:100%!important;}
+  div[class*="st-key-keypad_"] div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {flex:1 1 0!important;min-width:0!important;max-width:25%!important;width:0!important;}
+  div[class*="st-key-qbtn_"] button {height:48px!important;min-width:0!important;padding:0!important;}
+  div[class*="st-key-qbtn_"] button p, div[class*="st-key-qbtn_"] button span {font-size:17px!important;}
+  div[class*="st-key-prod_"] {padding:12px!important; margin-bottom:4px;}
+  div[data-testid="stTextArea"] textarea {font-size:16px!important;}
+  div.st-key-mobile_total [data-testid="stMetricValue"] {font-size:32px!important;}
 }
-</style>
-"""
-st.markdown(CSS, unsafe_allow_html=True)
-
+@media (max-width:355px) {
+ div[class*="st-key-qbtn_"] button p, div[class*="st-key-qbtn_"] button span {font-size:15px!important;}
+}
+</style>''', unsafe_allow_html=True)
 
 # --------- Order parsing: pure functions, independently testable ---------
 KOREAN_NUMBERS = {"하나":1,"한":1,"두":2,"둘":2,"세":3,"셋":3,"네":4,"넷":4,"다섯":5,"여섯":6,"일곱":7,"여덟":8,"아홉":9,"열":10}
@@ -238,59 +191,53 @@ def fill_example():
     st.session_state["order_text"] = EXAMPLE
 
 
-# --------- Interactive app ---------
+
+# ---- 입력 위젯을 먼저 렌더링하고 마지막에 합계를 한 번만 계산 ----
 for i in range(len(PRODUCTS)):
     st.session_state.setdefault(f"qty_{i}", 0)
 st.session_state.setdefault("order_text", "")
 
-st.markdown('''<div class="hero"><div><h1>🥤 식혜 주문 계산기 <span style="color:#91c7ff">PRO</span></h1>
-<p>수량 선택 · 주문 문구 인식 · 할인 · 배송비까지 한 번에</p></div>
-<div class="hero-tag">휴대폰 · PC 최적화</div></div>''', unsafe_allow_html=True)
+st.markdown('<div class="hero"><div class="hero-kicker">SIKHYE MYEONGGA · ORDER TOOLS</div><div class="hero-title">🥤 식혜 주문 자동계산기 PRO</div><div class="hero-desc">수량 선택 · 주문 문구 인식 · 배송비 · 할인 · 고객 안내</div></div>', unsafe_allow_html=True)
 
-st.markdown('<div class="section-label">① 결제 설정</div>', unsafe_allow_html=True)
-st.caption("휴대폰에서도 바로 조정할 수 있도록 배송비와 할인 설정을 메인 화면에 배치했습니다.")
+st.markdown('<div class="section-title">① 결제 설정</div>', unsafe_allow_html=True)
+with st.container(border=True, key="payment_settings"):
+    shipping_on = st.toggle("택배비 받기", value=True, key="shipping_on", help="끄면 배송비 0원이며 업체 부담으로 고객 문구에 표시합니다.")
+    st.caption("무료배송 · 배송비는 업체 부담" if not shipping_on else "배송비를 고객 결제금액에 추가합니다")
+    s_col, d_col = st.columns(2, gap="small")
+    with s_col:
+        configured_fee = st.number_input("택배비 설정 (원)", min_value=0, step=500, value=4000, key="fee", disabled=not shipping_on)
+    with d_col:
+        rate = st.number_input("상품 할인율 (%)", min_value=0.0, max_value=100.0, step=1.0, value=0.0, key="discount")
 
-with st.container(border=True):
-    ctrl_left, ctrl_right = st.columns([1.25, 1], gap="small", vertical_alignment="bottom")
-    with ctrl_left:
-        shipping_on = st.toggle("택배비 받기", value=True, key="shipping_on", help="끄면 무료배송으로 처리합니다. 배송비는 업체 부담으로 고객 문구에 반영됩니다.")
-        st.caption("✅ 배송비 0원 · 업체 부담" if not shipping_on else "택배비가 최종 결제금액에 추가됩니다")
-    with ctrl_right:
-        configured_fee = st.number_input("택배비 설정 (원)", min_value=0, step=500, value=4000, key="fee")
-    rate = st.number_input("상품 전체 할인율 (%)", min_value=0.0, max_value=100.0, step=1.0, value=0.0, key="discount")
-
-with st.expander("⚙️ 상품 가격 · 계좌 · 기본 용량 수정"):
-    st.caption("기본 가격과 계좌가 미리 입력되어 있으며 필요할 때 수정할 수 있습니다.")
-    price_col1, price_col2 = st.columns(2, gap="medium")
+with st.expander("⚙️ 상품 가격 · 입금계좌 수정"):
+    st.caption("기본 가격과 계좌정보를 수정할 수 있습니다.")
     prices = {}
-    for i, (product, base_price) in enumerate(PRODUCTS.items()):
-        with (price_col1 if i < 3 else price_col2):
-            prices[product] = int(st.number_input(product, min_value=0, value=base_price, step=50, key=f"price_{i}"))
-    default_size = st.selectbox("용량이 없는 주문의 기본 크기", ["1L", "500ml", "200ml 파우치"], key="size_default")
-    st.markdown("**입금 안내 계좌**")
+    for i, (product, default_price) in enumerate(PRODUCTS.items()):
+        prices[product] = int(st.number_input(product, min_value=0, value=default_price, step=50, key=f"price_{i}"))
+    default_size = st.selectbox("용량 미기재 시 기본 크기", ["1L", "500ml", "200ml 파우치"], key="size_default")
     account_number = st.text_input("계좌번호", value=DEFAULT_BANK, key="bank")
     account_holder = st.text_input("예금주", value=DEFAULT_OWNER, key="holder")
 
-# The controls inside an expander still execute, even when visually collapsed.
-st.markdown('<div class="section-label">② 주문 문구 붙여넣기</div>', unsafe_allow_html=True)
-st.caption("카톡 대화나 간단한 주문을 붙여넣으세요. 예시는 입력하지 않는 한 계산되지 않습니다.")
-text_input = st.text_area("주문 내용", height=125, placeholder=EXAMPLE, key="order_text", label_visibility="collapsed")
-with st.expander("입력 예시 확인"):
+st.markdown('<div class="section-title">② 카톡 주문 붙여넣기</div>', unsafe_allow_html=True)
+st.caption("예시는 흐리게 보일 뿐 계산에는 포함되지 않습니다. 직접 입력하거나 붙여넣으세요.")
+order_text = st.text_area("주문 내용", key="order_text", height=120, placeholder=EXAMPLE, label_visibility="collapsed")
+with st.expander("주문 입력 예시 복사/불러오기"):
     st.code(EXAMPLE, language=None)
-    st.button("예시 불러오기", on_click=fill_example, key="load_example")
+    st.button("예시를 입력창에 넣기", on_click=fill_example, key="sample_load")
 
-# Calculate once from current widget state, for all presentation layouts.
-rows = parse_orders(text_input, prices, default_size)
+# 주문 문구는 위에서 받고, 버튼 수량은 세션 상태를 통해 반영되므로
+# 요약을 계산기보다 앞에 두어도 버튼 클릭 시 즉시 재계산됩니다.
+rows = parse_orders(order_text, prices, default_size)
 for i, product in enumerate(PRODUCTS):
-    q = int(st.session_state[f"qty_{i}"])
+    q = int(st.session_state.get(f"qty_{i}", 0))
     if q:
-        rows.append({"입력방식":"수량 버튼", "원문":"", "품목":product, "수량":q, "단가":prices[product], "금액":q*prices[product]})
+        rows.append({"입력방식":"버튼 입력", "원문":"", "품목":product, "수량":q, "단가":prices[product], "금액":q*prices[product]})
 
 if rows:
     df = pd.DataFrame(rows)
-    summary = df.groupby(["품목", "단가"], sort=False, as_index=False).agg({"수량":"sum", "금액":"sum"})
-    summary["_sort"] = summary["품목"].map({p:i for i,p in enumerate(PRODUCTS)})
-    summary = summary.sort_values("_sort").drop(columns="_sort")
+    summary = df.groupby(["품목", "단가"], as_index=False, sort=False).agg({"수량":"sum", "금액":"sum"})
+    summary["_order"] = summary["품목"].map({p:i for i,p in enumerate(PRODUCTS)})
+    summary = summary.sort_values("_order").drop(columns="_order")
     subtotal = int(summary["금액"].sum())
     total_qty = int(summary["수량"].sum())
 else:
@@ -299,76 +246,72 @@ else:
     subtotal = total_qty = 0
 
 discount_amount = round(subtotal * rate / 100)
-shipping_cost = configured_fee if shipping_on and total_qty else 0
-final_amount = max(0, subtotal - discount_amount) + shipping_cost
+shipping_cost = int(configured_fee) if (shipping_on and total_qty > 0) else 0
+final_amount = subtotal - discount_amount + shipping_cost
 
+# 중요: 합계 카드에 여러 줄 문자열 HTML을 사용하지 않음.
+# 기본 Streamlit 요소는 Markdown 자동 렌더링/코드 블럭 오작동의 영향을 받지 않습니다.
+def render_summary(key):
+    with st.container(border=True, key=key):
+        st.metric("최종 결제금액", f"{final_amount:,}원")
+        st.markdown(f"**총 수량**  {total_qty:,}개")
+        st.markdown(f"**상품 합계**  {subtotal:,}원")
+        if discount_amount:
+            st.markdown(f"**상품 할인 ({rate:g}%)**  -{discount_amount:,}원")
+        st.markdown(f"**택배비**  {shipping_cost:,}원")
+        if not shipping_on:
+            st.caption("✓ 택배비는 업체에서 부담합니다.")
 
-def total_card(class_name):
-    shipping_status = '<span class="ship-pay">구매자 부담</span>' if shipping_on else '<span class="ship-free">업체 부담 / 무료배송</span>'
-    return f'''<div class="{class_name}"><div class="total-card">
-      <div class="total-title">최종 결제금액</div><div class="total-number">{final_amount:,}원</div>
-      <div class="total-row"><span>총 수량</span><strong>{total_qty:,}개</strong></div>
-      <div class="total-row"><span>상품 합계</span><strong>{subtotal:,}원</strong></div>
-      {f'<div class="total-row"><span>상품 할인 ({rate:g}%)</span><strong>-{discount_amount:,}원</strong></div>' if discount_amount > 0 else ''}
-      <div class="total-row"><span>택배비 {shipping_status}</span><strong>{shipping_cost:,}원</strong></div>
-    </div></div>'''
+# 모바일에는 합계를 먼저 표시하고, PC에는 오른쪽에 표시
+render_summary("mobile_total")
 
-# On phones this card appears BEFORE five product rows, rather than below them.
-st.markdown(total_card("mobile-only"), unsafe_allow_html=True)
-
-left, right = st.columns([1.26, 1], gap="large")
+left, right = st.columns([1.25, 1], gap="large")
 with left:
-    st.markdown('<div class="section-label">③ 수량 버튼 계산기</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">③ 수량 버튼 계산기</div>', unsafe_allow_html=True)
     st.button("수량 전체 초기화", on_click=reset_quantities, key="reset_all")
     for i, (product, price) in enumerate(prices.items()):
-        with st.container(border=True):
-            st.markdown(f'<div class="product-name">{escape(product)}</div><div class="product-price">단가 {price:,}원</div>', unsafe_allow_html=True)
-            # Full-width numeric input + four equal-sized touch keys: never over-nest columns.
-            st.number_input("수량", min_value=0, step=1, key=f"qty_{i}", label_visibility="collapsed")
-            bs = st.columns(4, gap="small")
-            for col, (symbol, delta) in zip(bs, [("−", -1), ("+", 1), ("+5", 5), ("0", None)]):
-                with col:
-                    if delta is None:
-                        st.button(symbol, key=f"qbtn_{i}_zero", on_click=adjust_quantity, args=(i, -999999), use_container_width=True)
-                    else:
-                        st.button(symbol, key=f"qbtn_{i}_{delta}", on_click=adjust_quantity, args=(i, delta), use_container_width=True)
-
+        with st.container(border=True, key=f"prod_{i}"):
+            st.markdown(f"**{escape(product)}**")
+            st.caption(f"단가 {price:,}원")
+            st.number_input(f"{product} 수량", min_value=0, step=1, key=f"qty_{i}", label_visibility="collapsed")
+            with st.container(key=f"keypad_{i}"):
+                btn_cols = st.columns(4, gap="small")
+                for col, (label, delta) in zip(btn_cols, [("−", -1), ("+", 1), ("+5", 5), ("0", None)]):
+                    with col:
+                        st.button(label, key=f"qbtn_{i}_{'zero' if delta is None else str(delta)}", on_click=adjust_quantity,
+                                  args=(i, -999999 if delta is None else delta), use_container_width=True)
 with right:
-    st.markdown('<div class="section-label desktop-only">총합계</div>', unsafe_allow_html=True)
-    st.markdown(total_card("desktop-only"), unsafe_allow_html=True)
-    st.markdown('<div class="sub-note desktop-only">수량 또는 배송비를 바꾸면 바로 다시 계산됩니다.</div>', unsafe_allow_html=True)
+    render_summary("desktop_total")
 
 st.divider()
-st.markdown('<div class="section-label">④ 주문 계산 내역</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">④ 주문 계산 내역</div>', unsafe_allow_html=True)
 if summary.empty:
     st.info("수량 버튼을 누르거나 주문 문구를 입력하면 계산 내역이 나타납니다.")
 else:
-    presentation = summary.copy()
-    presentation["단가"] = presentation["단가"].apply(lambda x: f"{x:,}원")
-    presentation["금액"] = presentation["금액"].apply(lambda x: f"{x:,}원")
-    st.dataframe(presentation, hide_index=True, use_container_width=True)
-    with st.expander("입력별 인식 내역 확인"):
+    shown = summary.copy()
+    shown["단가"] = shown["단가"].map(lambda x: f"{int(x):,}원")
+    shown["금액"] = shown["금액"].map(lambda x: f"{int(x):,}원")
+    st.dataframe(shown, hide_index=True, use_container_width=True)
+    with st.expander("상세 인식 내역 확인"):
         st.dataframe(df, hide_index=True, use_container_width=True)
 
 st.divider()
-st.markdown('<div class="section-label">⑤ 고객에게 보낼 계산 문구</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-title">⑤ 고객에게 보낼 계산 문구</div>', unsafe_allow_html=True)
 if summary.empty:
     st.caption("주문이 생기면 고객 메시지를 자동 생성합니다.")
 else:
-    templates = make_message_templates(summary, subtotal, rate, discount_amount, shipping_on, configured_fee, final_amount, account_number, account_holder)
-    st.selectbox("문구 형식", list(templates), key="template_type")
-    draft = templates[st.session_state["template_type"]]
+    templates = make_message_templates(summary, subtotal, rate, discount_amount, shipping_on,
+                                       int(configured_fee), final_amount, account_number, account_holder)
+    chosen = st.selectbox("문구 형식", list(templates), key="template_type")
+    draft = templates[chosen]
     signature = hashlib.sha256(draft.encode("utf-8")).hexdigest()
     if st.session_state.get("draft_signature") != signature:
         st.session_state["message_edit"] = draft
         st.session_state["draft_signature"] = signature
-    edited_message = st.text_area("문구 직접 수정", key="message_edit", height=230)
-    st.caption("아래 메시지의 복사 아이콘을 누르면 휴대폰에서도 복사할 수 있습니다.")
-    st.code(edited_message, language=None)
-    download_left, download_right = st.columns(2, gap="small")
-    with download_left:
-        st.download_button("문구 TXT 저장", edited_message.encode("utf-8-sig"), file_name="식혜_주문안내.txt", mime="text/plain", use_container_width=True)
-    with download_right:
-        st.download_button("계산 CSV 저장", summary.to_csv(index=False).encode("utf-8-sig"), file_name="식혜_계산결과.csv", mime="text/csv", use_container_width=True)
+    message = st.text_area("고객 발송 문구 (수정 가능)", key="message_edit", height=245)
+    st.caption("아래 문구 오른쪽 위 복사 버튼을 눌러 복사하세요.")
+    st.code(message, language=None)
+    st.download_button("문구 TXT 다운로드", message.encode("utf-8-sig"), file_name="식혜_주문안내.txt", mime="text/plain", use_container_width=True)
+    st.download_button("계산 결과 CSV 다운로드", summary.to_csv(index=False).encode("utf-8-sig"), file_name="식혜_계산결과.csv", mime="text/csv", use_container_width=True)
 
-st.caption("휴대폰/PC 공용 | 개인정보와 주문 내역은 이 앱의 별도 데이터베이스에 저장하지 않습니다.")
+st.caption("휴대폰/PC 공용 · 주문·개인정보를 앱의 별도 데이터베이스에 저장하지 않습니다.")
