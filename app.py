@@ -1,4 +1,4 @@
-"""식혜명가 주문 계산기 PRO v15.0 (PC/모바일, 빠른 부분 재실행).
+"""식혜명가 주문 계산기 PRO v17.0 (PC/모바일, 사용설명서 포함).
 
 - Streamlit fragment: 입력 조작 시 앱 전체 대신 계산기만 재실행
 - 직접 입력 수량 / 카톡 주문 문구 합산
@@ -335,15 +335,126 @@ div[data-testid="stTextArea"] textarea{font-size:15px!important}
  div[data-testid="stTextArea"] textarea{font-size:16px!important}
 }
 @media(max-width:355px){div[class*="st-key-qtybtn_"] button p{font-size:16px!important}}
+/* 상단 일체형 헤더와 오른쪽 사용설명서 버튼 */
+.st-key-header_hero{background:linear-gradient(110deg,#132540,#203f68)!important;border:0!important;border-radius:18px!important;padding:20px 24px!important;margin-bottom:14px!important;box-shadow:0 8px 24px rgba(13,35,67,.12)}
+.st-key-header_hero .hero{background:transparent!important;border-radius:0!important;padding:0!important;margin:0!important;box-shadow:none!important}
+.st-key-header_hero [data-testid="stHorizontalBlock"]{display:flex!important;flex-wrap:nowrap!important;flex-direction:row!important;align-items:center!important;gap:10px!important}
+.st-key-header_hero [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{min-width:0!important}
+.st-key-header_hero [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child{flex:0 0 auto!important;width:142px!important;min-width:112px!important}
+.st-key-header_hero .st-key-open_help button{min-height:43px!important;width:100%;border:1px solid rgba(255,255,255,.48)!important;background:#f8fbff!important;color:#172f51!important;font-size:14px!important;font-weight:850!important;border-radius:12px!important;white-space:nowrap!important;box-shadow:0 3px 9px rgba(5,20,44,.12)}
+.st-key-header_hero .st-key-open_help button:hover{background:#e8f1ff!important}
+@media(max-width:830px){
+ .st-key-header_hero{padding:14px 13px!important;border-radius:14px!important}
+ .st-key-header_hero .hero h1{font-size:clamp(16px,4.7vw,23px)!important;line-height:1.27!important;overflow-wrap:break-word}
+ .st-key-header_hero .hero p{font-size:11px!important;line-height:1.5}
+ .st-key-header_hero .hero .eyebrow{font-size:9px!important}
+ .st-key-header_hero [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child{width:113px!important;min-width:113px!important}
+ .st-key-header_hero .st-key-open_help button{min-height:38px!important;padding:4px 6px!important;font-size:12px!important;border-radius:10px!important}
+}
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
-st.markdown(
-    '<div class="hero"><div class="eyebrow">SIKHYE MYEONGGA / ORDER DESK</div>'
-    '<h1>🥤 식혜 주문 자동계산기 PRO</h1>'
-    '<p>수량 선택 · 카톡 주문 인식 · 할인과 배송 · 고객 안내까지 한 화면에서</p></div>',
-    unsafe_allow_html=True,
-)
+# 사용설명서: 외부 이미지 파일이 필요 없는 가벼운 일러스트(HTML/CSS)입니다.
+# st.html()을 사용해 모바일 화면에서 예전처럼 HTML 태그가 글자로 표시되는 문제를 피합니다.
+HELP_CSS = """
+<style>
+.sikhye-guide{font-family:system-ui,-apple-system,'Malgun Gothic',sans-serif;color:#14243b;font-size:14px}
+.sikhye-guide *{box-sizing:border-box}
+.sikhye-guide .guide-lead{background:linear-gradient(125deg,#ecf4ff,#f8fbff);border:1px solid #d8e7fa;border-radius:16px;padding:17px 19px;margin:0 0 16px}
+.sikhye-guide .guide-kicker{color:#2764cc;font-size:11px;letter-spacing:.08em;font-weight:900;margin-bottom:7px}
+.sikhye-guide .guide-lead h3{font-size:21px;font-weight:900;margin:0 0 8px;letter-spacing:-.035em}
+.sikhye-guide .guide-lead p{font-size:13px;line-height:1.65;color:#49617e;margin:0}
+.sikhye-guide .guide-step{padding:15px;border:1px solid #e0e7f0;border-radius:16px;margin:0 0 11px;background:#fff}
+.sikhye-guide .guide-step-head{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.sikhye-guide .guide-no{width:27px;height:27px;border-radius:9px;background:#e8f0ff;color:#245bc1;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0}
+.sikhye-guide .guide-step-head h4{margin:0;font-size:15px;font-weight:850;color:#17253b}
+.sikhye-guide .guide-step p{font-size:12.5px;line-height:1.6;margin:0 0 12px;color:#53647b}
+.sikhye-guide .mock{background:#f3f6fa;border:1px solid #e0e7f0;border-radius:12px;padding:12px;overflow:hidden}
+.sikhye-guide .mock-label{font-size:10px;font-weight:800;color:#64748b;margin-bottom:8px}
+.sikhye-guide .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sikhye-guide .mock-switch{position:relative;display:inline-block;border-radius:999px;width:36px;height:21px;background:#cdd8e7;flex-shrink:0}
+.sikhye-guide .mock-switch:after{content:'';position:absolute;width:15px;height:15px;top:3px;left:3px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #7a90a9}
+.sikhye-guide .chip{display:inline-flex;align-items:center;gap:4px;background:#edf7ef;color:#19663b;border-radius:8px;font-size:11px;font-weight:750;padding:5px 7px}
+.sikhye-guide .field{background:white;border:1px solid #d9e3ee;border-radius:8px;padding:8px 10px;font-weight:850;font-size:13px}
+.sikhye-guide .flex-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.sikhye-guide .quantity-box{background:#fff;border:1px solid #dce5f0;padding:9px;border-radius:10px}
+.sikhye-guide .num{font-size:21px;font-weight:900;color:#16345e;display:inline-block;margin-right:auto}
+.sikhye-guide .fake-btn{font-weight:900;color:#224e9c;font-size:13px;background:#e8f0ff;border:1px solid #cfdfff;border-radius:7px;padding:6px 10px;white-space:nowrap}
+.sikhye-guide .chat{max-width:90%;background:#fff;border-radius:11px 11px 11px 3px;border:1px solid #d6e1f0;padding:9px 12px;margin-bottom:6px;color:#253e5c;font-size:12px;font-weight:650}
+.sikhye-guide .chat.alt{background:#fff7da;border-color:#f0e3aa;margin-left:auto;border-radius:11px 11px 3px 11px}
+.sikhye-guide .arrow{font-size:18px;color:#4b85ce;text-align:center;font-weight:900;line-height:1.4}
+.sikhye-guide .receipt{background:#132742;border-radius:11px;color:#eaf2ff;padding:12px 14px}
+.sikhye-guide .receipt strong{font-size:24px;letter-spacing:-.035em;color:#ffcb50}
+.sikhye-guide .receipt .rline{display:flex;justify-content:space-between;gap:8px;color:#eaf2ff;font-size:11px;border-top:1px solid #35506d;margin-top:8px;padding-top:8px}
+.sikhye-guide .copy-preview{background:#fff;border:1px solid #d8e3f0;border-radius:9px;padding:10px;color:#3d5067;font-size:11.5px;line-height:1.75}
+.sikhye-guide .fake-copy{background:#2862db;color:#fff;font-size:13px;font-weight:900;padding:10px;border-radius:9px;text-align:center;margin-top:8px}
+.sikhye-guide .guide-note{font-size:12px;line-height:1.7;background:#fffaeb;border:1px solid #f3e5af;border-radius:12px;padding:12px 13px;color:#6f591d;margin:12px 0 0}
+@media(max-width:450px){.sikhye-guide .guide-lead{padding:13px}.sikhye-guide .guide-step{padding:12px}.sikhye-guide .guide-lead h3{font-size:18px}}
+</style>
+"""
+
+HELP_BODY = """
+<div class="sikhye-guide">
+  <div class="guide-lead">
+    <div class="guide-kicker">QUICK START · 1분 사용법</div>
+    <h3>처음 사용해도 5단계면 끝!</h3>
+    <p>① 배송과 할인 설정 → ② 수량 선택 또는 카톡 주문 복사 → ③ 합계 확인 → ④ 문구 선택 → ⑤ 바로 복사</p>
+  </div>
+  <div class="guide-step">
+    <div class="guide-step-head"><span class="guide-no">1</span><h4>배송비와 할인 설정</h4></div>
+    <p><b>고객에게 택배비 받기</b>는 처음에 꺼져 있어요. 고객에게 배송비를 받을 때만 켜세요. 할인율이 필요하면 %를 입력해요.</p>
+    <div class="mock">
+      <div class="toggle-row"><b>고객에게 택배비 받기</b><span class="mock-switch"></span></div>
+      <div class="chip" style="margin:8px 0">✓ OFF · 택배비 0원, 업체 부담</div>
+      <div class="flex-row"><div><div class="mock-label">택배비 (설정값)</div><div class="field">4,000원</div></div><div><div class="mock-label">상품 할인율</div><div class="field">0%</div></div></div>
+    </div>
+  </div>
+  <div class="guide-step">
+    <div class="guide-step-head"><span class="guide-no">2</span><h4>상품 수량을 버튼으로 입력</h4></div>
+    <p><b>+ / − / +5 / 0</b> 버튼으로 빠르게 개수를 정하거나 숫자를 직접 입력하세요. 예를 들어 일반식혜 1L를 3개 주문받았다면 <b>+를 세 번</b> 누르면 됩니다.</p>
+    <div class="mock"><div class="quantity-box"><b>일반식혜 1L</b><div class="mock-label">단가 5,000원</div><div class="flex-row"><span class="num">3개</span><span class="fake-btn">−</span><span class="fake-btn">+</span><span class="fake-btn">+5</span><span class="fake-btn">0</span></div></div><div class="chip" style="margin-top:8px">3개 × 5,000원 = 15,000원</div></div>
+  </div>
+  <div class="guide-step">
+    <div class="guide-step-head"><span class="guide-no">3</span><h4>카톡 주문은 그대로 붙여넣기</h4></div>
+    <p>버튼 대신 카톡 주문 문장을 붙여넣어도 돼요. <b>식혜, 감주, 호박감주</b> 같은 이름과 1L, 500ml, 200ml 표기를 알아봅니다.</p>
+    <div class="mock"><div class="chat">일반식혜 1L 3개요!</div><div class="chat alt">호박감주 500ml 2개도 추가해주세요 😊</div><div class="arrow">↓ 자동 인식</div><div class="chip">일반식혜 1L 3개 + 단호박식혜 500ml 2개</div></div>
+  </div>
+  <div class="guide-step">
+    <div class="guide-step-head"><span class="guide-no">4</span><h4>총 결제금액 확인</h4></div>
+    <p>상품금액에서 할인한 뒤, 택배비를 받도록 설정한 경우에만 배송비가 더해집니다. <b>모바일은 위쪽</b>, PC는 오른쪽에서 총합계를 확인해요.</p>
+    <div class="mock"><div class="receipt"><div style="font-size:11px;color:#b8d1ee;font-weight:800;margin-bottom:4px">최종 결제금액 · 배송비 OFF 예시</div><strong>22,900원</strong><div class="rline"><span>상품 5개</span><span>22,900원</span></div><div class="rline"><span>택배비 · 업체 부담</span><span>0원</span></div></div></div>
+  </div>
+  <div class="guide-step">
+    <div class="guide-step-head"><span class="guide-no">5</span><h4>고객 안내 문구 선택 후 한 번에 복사</h4></div>
+    <p><b>친절 기본형 · 영수증형 · 입금 안내형 · 배송비 안내형</b> 중 선택하고, 문구를 고친 다음 파란색 <b>바로 복사</b> 버튼을 눌러 카톡에 붙여넣으세요.</p>
+    <div class="mock"><div class="copy-preview">상품 합계: 22,900원<br>택배비: 0원 (업체 부담)<br>입금계좌: IM뱅크 508106077707<br>예금주: 이서백<br>감사합니다.</div><div class="fake-copy">📋 고객 안내 문구 바로 복사</div></div>
+  </div>
+  <div class="guide-note"><b>💡 사용 팁</b><br>• 버튼 수량과 카톡 입력 수량은 <b>합산</b>됩니다. 중복 주문 입력에 주의하세요.<br>• <b>전체 수량 초기화</b>는 버튼 입력만 초기화합니다. 카톡 주문은 <b>문구 지우기</b>로 따로 삭제하세요.<br>• 처음 보이는 흐린 예시 문장은 실제 주문 계산에 포함되지 않습니다.<br>• 상품 가격은 <b>기본 가격과 입금계좌 수정</b> 메뉴 안에서 변경할 수 있지만, 입금계좌는 고정 표시됩니다.</div>
+</div>
+"""
+
+
+@st.dialog("📖 식혜 주문계산기 사용설명서", width="large")
+def show_user_guide() -> None:
+    # st.html renders the inline step illustrations as real HTML, not escaped code.
+    # The guide contains no customer text or untrusted HTML.
+    st.html(HELP_CSS + HELP_BODY)
+    if st.button("✓ 설명서 닫기", key="close_user_guide", use_container_width=True):
+        st.rerun()
+
+
+with st.container(key="header_hero"):
+    title_col, help_col = st.columns([4.4, 1.1], gap="small", vertical_alignment="center")
+    with title_col:
+        st.markdown(
+            '<div class="hero"><div class="eyebrow">SIKHYE MYEONGGA / ORDER DESK</div>'
+            '<h1>🥤 식혜 주문 자동계산기 PRO</h1>'
+            '<p>수량 선택 · 카톡 주문 인식 · 할인과 배송 · 고객 안내까지 한 화면에서</p></div>',
+            unsafe_allow_html=True,
+        )
+    with help_col:
+        if st.button("❔ 사용설명서", key="open_help", use_container_width=True):
+            show_user_guide()
 
 # State pre-initialization must happen before widgets are instantiated.
 for i in range(len(PRODUCTS)):
