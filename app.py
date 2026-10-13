@@ -1,4 +1,4 @@
-"""식혜명가 주문 계산기 PRO v14.0 (PC/모바일, 빠른 부분 재실행).
+"""식혜명가 주문 계산기 PRO v15.0 (PC/모바일, 빠른 부분 재실행).
 
 - Streamlit fragment: 입력 조작 시 앱 전체 대신 계산기만 재실행
 - 직접 입력 수량 / 카톡 주문 문구 합산
@@ -9,12 +9,14 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections import defaultdict
 from html import escape
 from typing import Any
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="식혜명가 주문 계산기 | PRO",
@@ -30,8 +32,8 @@ PRODUCTS: dict[str, int] = {
     "단호박식혜 1L": 6700,
     "단호박식혜 500ml": 3950,
 }
-BANK_DEFAULT = "3333-29-8917220"
-OWNER_DEFAULT = "이서백(식혜명가)"
+BANK_DEFAULT = "IM뱅크 508106077707"
+OWNER_DEFAULT = "이서백"
 EXAMPLE = (
     "식혜 1L 3개\n"
     "호박감주 500ml 2개\n"
@@ -193,6 +195,61 @@ def make_messages(order: dict[str, Any], account: str, owner: str) -> dict[str, 
             "입금 안내형": deposit, "배송비 안내형": shipping_template}
 
 
+
+def make_copy_button_html(message: str) -> str:
+    """One-touch clipboard button. All customer text is JS-string encoded, never parsed as markup."""
+    # Encoding the string as a JS literal while escaping HTML special chars prevents
+    # a malicious pasted message from ending the script or altering the page.
+    payload = (json.dumps(message, ensure_ascii=False)
+               .replace("<", "\\u003c").replace(">", "\\u003e")
+               .replace("&", "\\u0026").replace("\u2028", "\\u2028")
+               .replace("\u2029", "\\u2029"))
+    return r"""<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box} html,body{margin:0;padding:0;background:transparent;font-family:system-ui,-apple-system,'Malgun Gothic',sans-serif}
+button{width:100%;height:49px;padding:0 12px;background:#2563eb;color:#fff;border:0;border-radius:11px;
+font-weight:850;font-size:16px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:active{transform:scale(.99)}button:focus-visible{outline:3px solid #93c5fd}
+button.ok{background:#15803d}button.fail{background:#b45309}
+#status{display:block;height:17px;padding:3px 2px 0;font-size:11px;color:#475569}
+</style></head><body>
+<button id="copy" type="button" aria-label="고객 안내 문구 바로 복사">📋 고객 안내 문구 바로 복사</button>
+<span id="status" role="status" aria-live="polite"></span>
+<script>
+const message = __MESSAGE__;
+const button = document.getElementById('copy');
+const status = document.getElementById('status');
+function legacyCopy() {
+  const area=document.createElement('textarea');
+  area.value=message; area.setAttribute('readonly','readonly');
+  area.style.cssText='position:fixed;top:0;left:-9999px;opacity:0;';
+  document.body.appendChild(area); area.focus(); area.select(); area.setSelectionRange(0,area.value.length);
+  let success=false;
+  try { success=document.execCommand('copy'); } catch(e) { success=false; }
+  area.remove(); return success;
+}
+button.addEventListener('click', async () => {
+  button.disabled=true;
+  let copied=false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(message);
+      copied=true;
+    }
+  } catch(e) { copied=false; }
+  if (!copied) copied=legacyCopy();
+  button.disabled=false;
+  if (copied) {
+    button.className='ok';button.textContent='✓ 복사 완료';
+    status.textContent='카톡 채팅창에 붙여넣으면 됩니다.';
+  } else {
+    button.className='fail';button.textContent='복사가 차단됐어요';
+    status.textContent='브라우저가 복사를 제한했습니다. 아래 원본 문구를 길게 눌러 복사하세요.';
+  }
+});
+</script></body></html>""".replace('__MESSAGE__', payload)
+
 def change_qty(index: int, delta: int | None) -> None:
     key = f"qty_{index}"
     if delta is None:
@@ -295,7 +352,7 @@ st.session_state.setdefault("order_text", "")
 def calculator_app() -> None:
     with st.container(border=False, key="settings_card"):
         st.markdown('<div class="sec">① 결제 설정</div>', unsafe_allow_html=True)
-        shipping_on = st.toggle("고객에게 택배비 받기", value=True, key="ship_on")
+        shipping_on = st.toggle("고객에게 택배비 받기", value=False, key="ship_on")
         if not shipping_on:
             st.caption("무료배송 적용 중 · 택배비는 업체가 부담합니다")
         s1, s2 = st.columns(2, gap="small")
@@ -310,8 +367,11 @@ def calculator_app() -> None:
         for i, (product, price) in enumerate(PRODUCTS.items()):
             prices[product] = int(st.number_input(product, min_value=0, value=price, step=50, key=f"price_{i}"))
         default_size = st.selectbox("용량을 적지 않은 주문 기본값", ["1L", "500ml", "200ml 파우치"], key="default_size")
-        bank = st.text_input("계좌번호", value=BANK_DEFAULT, key="bank_account")
-        owner = st.text_input("예금주", value=OWNER_DEFAULT, key="bank_owner")
+        # 입금 정보는 운영자가 요청한 고정 정보입니다. 설정에서 변경되지 않습니다.
+        bank = BANK_DEFAULT
+        owner = OWNER_DEFAULT
+        st.caption("입금계좌 (고정)")
+        st.info(f"{bank}  |  예금주 {owner}")
 
     # Parse pasted orders once at the start. The fragment re-renders only its own UI on button clicks.
     paste_rows, warnings = parse_orders(st.session_state["order_text"], default_size)
@@ -387,7 +447,11 @@ def calculator_app() -> None:
             st.session_state["editable_message"] = generated
             st.session_state["message_signature"] = signature
         message = st.text_area("문구 수정하기", key="editable_message", height=235)
-        with st.expander("한 번 눌러 복사하기", expanded=False):
+        # 고객이 수정한 문구를 버튼을 한 번 누르는 즉시 복사합니다.
+        # iframe의 사용자 클릭 이벤트에서 브라우저 Clipboard API를 호출합니다.
+        components.html(make_copy_button_html(message), height=68, scrolling=False)
+        # 일부 앱 내장 브라우저에서 클립보드 권한을 차단할 경우를 대비한 대안.
+        with st.expander("복사 버튼이 차단될 경우 (대체 방법)", expanded=False):
             st.code(message, language=None)
         d1, d2 = st.columns(2, gap="small")
         with d1:
